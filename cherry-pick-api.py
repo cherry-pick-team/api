@@ -68,6 +68,7 @@ def generate_song_mock(i, query=''):
             'id': str(5000000000 + i + 61),
             'name': 'Album ' + query + ' #' + str(5000000000 + i + 61),
             'year': str(1990 + i % 20),
+            'cover_url': 'http://placehold.it/300x300',
         },
         'url': HOST + '/api/v2/song/' + str(i) + '/info',
         'url_stream': HOST + '/api/v2/song/' + str(i) + '/stream',
