@@ -185,14 +185,14 @@ def song_id_info(song_id):
             ]
         })
 
-    if song_id > 10000:
-        return jsonify({
-            'code': '404',
-            'message': 'song not found',
-            'fields': [
-                'id',
-            ]
-        })
+    # if song_id > 10000:
+    #     return jsonify({
+    #         'code': '404',
+    #         'message': 'song not found',
+    #         'fields': [
+    #             'id',
+    #         ]
+    #     })
 
     return json_response(
         generate_song_mock(song_id, 'some song with id')
