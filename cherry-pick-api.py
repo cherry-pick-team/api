@@ -156,9 +156,18 @@ def search_popular():
     result = []
 
     for i in range(1, limit + 1):
-        result.append('rand query ' + str(i))
+        result.append([18900000000000 + i*100, 'rand query ' + str(i)])
 
     shuffle(result)
+
+    def gen(i , q):
+        return [
+                generate_song_mock(i+ 1, q),
+                generate_song_mock(i+ 8, q),
+                generate_song_mock(i+ 5, q),
+                ]
+
+    result = map(lambda x: {'query': x[1], 'songs' : gen(x[0], x[1])}, result)
 
     return json_response(result)
 
