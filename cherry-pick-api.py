@@ -6,13 +6,14 @@ from flask import Flask
 from flask import Response
 from flask import jsonify, request
 
+from config import genius, sphinx, postgres, cropper
+
 app = Flask(__name__)
 app.debug = True
 
 
 def json_response(obj_or_array):
-    return Response(json.dumps(obj_or_array, sort_keys=True,
-                               indent=4), mimetype='application/json')
+    return Response(json.dumps(obj_or_array, sort_keys=True, indent=4), mimetype='application/json')
 
 
 def get_arg(key, default=None):
@@ -130,13 +131,21 @@ def search():
             ]
         })
 
-    result = []
+    found_ids = sphinx.find_songs(query)
+    if not found_ids:
+        return jsonify({
+            'code': '404',
+            'message': 'Found nothing',
+            'fields': [
+                'id',
+            ]
+        })
+    found_coordinates = postgres.get_all_song_ids_and_timestamps(found_ids)
+    for mapa in found_coordinates:
+        genius_song_id = mapa['genius_id']
+        mapa.update(genius.get_info(genius_song_id))
 
-    id_from = (page - 1) * limit + 1
-    for i in range(id_from, id_from + limit):
-        result.append(generate_song_mock(i, query))
-
-    return json_response(result)
+    return json_response(found_coordinates)
 
 
 @app.route('/api/v2/search/popular', methods=['GET'])
@@ -186,17 +195,18 @@ def song_id_info(song_id):
             ]
         })
 
-    # if song_id > 10000:
-    #     return jsonify({
-    #         'code': '404',
-    #         'message': 'song not found',
-    #         'fields': [
-    #             'id',
-    #         ]
-    #     })
+    info = postgres.get_song_info_by_id(song_id)
+    if not info:
+        return jsonify({
+                'code': '404',
+                'message': 'song not found',
+                'fields': [
+                    'id',
+                ]
+            })
 
     return json_response(
-        generate_song_mock(song_id, 'some song with id')
+        genius.get_info(info['genius_id'])
     )
 
 
