@@ -1,4 +1,8 @@
-requests
-pymysql
+beautifulsoup4==4.5.3
+packaging==16.8
+psycopg2==2.7.1
+pymongo==3.4.0
+pyparsing==2.2.0
+requests==2.13.0
 Flask==0.12
-gunicorn==19.3.0
+pymysql==0.7.11
