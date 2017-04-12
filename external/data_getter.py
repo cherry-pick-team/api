@@ -56,7 +56,7 @@ class SphinxSearch(object):
 
 
 class PsgClient(object):
-    def __init__(self, user, password, db_name):
+    def __init__(self, host, user, password, db_name):
         self.select_unique_songs = '''
         SELECT t.songid, s.genius_id, s.file_id, array_agg(t.start_time_ms), array_agg(t.end_time_ms)
         FROM transcription AS t
@@ -72,8 +72,8 @@ class PsgClient(object):
         FROM songs AS s
         WHERE s.id=%s;
         '''
-        self.conn = psycopg2.connect('postgres://{}:{}@localhost:5432/{}'.format
-                                     (user, password, db_name))
+        self.conn = psycopg2.connect('postgres://{}:{}@{}:5432/{}'.format
+                                     (user, password, host, db_name))
 
     def get_all_song_ids_and_timestamps(self, ids):
         cur = self.conn.cursor()
@@ -134,3 +134,4 @@ class CropperDemon(object):
             'intervals': intervals
         }
         return requests.post(self.request_path, data=json.dumps(request_json))
+
