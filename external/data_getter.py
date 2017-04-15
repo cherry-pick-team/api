@@ -1,3 +1,4 @@
+import collections
 import logging
 import json
 
@@ -75,6 +76,32 @@ class PsgClient(object):
         self.conn = psycopg2.connect('postgres://{}:{}@{}:5432/{}'.format
                                      (user, password, host, db_name))
 
+        self.get_ordered_lyrics_map = '''
+        SELECT
+            t.start_time_ms, t.phrase
+        FROM transcription AS t
+        WHERE t.songid=%s
+        ORDER BY t.start_time_ms;
+        '''
+
+    def get_lyrics_map(self, songid):
+        cur = self.conn.cursor()
+        try:
+            cur.execute(self.get_ordered_lyrics_map, (songid,))
+            phrase_and_timestamps = cur.fetchall()
+            if phrase_and_timestamps:
+                result = collections.OrderedDict()
+                for phrase in phrase_and_timestamps:
+                    if len(phrase) > 1:
+                        result[phrase[0]] = phrase[1]
+                return result
+        except Exception as e:
+            logger.error('Failed to get songs info')
+            logger.error(e)
+            return {}
+        finally:
+            cur.close()
+
     def get_all_song_ids_and_timestamps(self, ids):
         cur = self.conn.cursor()
         try:
@@ -99,9 +126,9 @@ class PsgClient(object):
         except Exception as e:
             logger.error('Failed to get songs info')
             logger.error(e)
+            return []
         finally:
             cur.close()
-        return []
 
     def get_song_info_by_id(self, id):
         cur = self.conn.cursor()
@@ -119,9 +146,9 @@ class PsgClient(object):
         except Exception as e:
             logger.error('Failed to get song with id=`{}`'.format(id))
             logger.error(e)
+            return {}
         finally:
             cur.close()
-        return {}
 
 
 class CropperDemon(object):
@@ -134,4 +161,3 @@ class CropperDemon(object):
             'intervals': intervals
         }
         return requests.post(self.request_path, data=json.dumps(request_json))
-

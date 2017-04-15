@@ -141,10 +141,6 @@ def search():
             ]
         })
     found_coordinates = postgres.get_all_song_ids_and_timestamps(found_ids)
-    for mapa in found_coordinates:
-        genius_song_id = mapa['genius_id']
-        mapa.update(genius.get_info(genius_song_id))
-
     return json_response(found_coordinates)
 
 
@@ -205,9 +201,11 @@ def song_id_info(song_id):
                 ]
             })
 
-    return json_response(
-        genius.get_info(info['genius_id'])
-    )
+    info_map = genius.get_info(info['genius_id'])
+    lyrics_map = postgres.get_lyrics_map(song_id)
+    if lyrics_map:
+        info_map['timestamp_lyrics'] = lyrics_map
+    return json_response(info_map)
 
 
 if __name__ == '__main__':

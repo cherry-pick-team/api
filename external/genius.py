@@ -12,26 +12,27 @@ class Genius(object):
         response = requests.get(search_url, headers=self.headers)
         json = response.json()
         print(id)
-        if not json or json['meta']['status'] != 200:
+        if not json or json['meta']['status'] != 200 or not json['response']['song']:
             return {}
         info = {
             'song': {
                 'id': id,
-                'title': json['response']['song']['title'],
+                'title': json['response']['song'].get('title', 'unknown'),
                 'singers': [
                     {
-                        'id': json['response']['song']['primary_artist']['id'],
-                        'name': json['response']['song']['primary_artist']['name'],
+                        'id': json['response']['song'].get('primary_artist', {}).get('id', 0),
+                        'name': json['response']['song'].get('primary_artist', {}).get('name', 'unknown'),
                     }
                 ]
-            },
-            'album': {
-                'id': json['response']['song']['album']['id'],
-                'name': json['response']['song']['album']['name'],
-                'cover_url': json['response']['song']['album']['cover_art_url'],
             }
         }
-        for featured_artist in json['response']['song']['featured_artists']:
+        if json['response']['song'].get('album'):
+            info['album'] = {
+                'id': json['response']['song']['album'].get('id'),
+                'name': json['response']['song']['album'].get('name'),
+                'cover_url': json['response']['song']['album'].get('cover_art_url'),
+            }
+        for featured_artist in json['response']['song'].get('featured_artists'):
             info['song']['singers'].append({
                 'id': featured_artist['id'],
                 'name': featured_artist['name'],
