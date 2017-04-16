@@ -141,6 +141,21 @@ def search():
             ]
         })
     found_coordinates = postgres.get_all_song_ids_and_timestamps(found_ids)
+
+    def add_more_info(info):
+        more_info = postgres.get_song_info_by_id(info['id'])
+        info_map = genius.get_info(more_info['genius_id'])
+        lyrics_map = postgres.get_lyrics_map(info['id'])
+        if lyrics_map:
+            info_map['timestamp_lyrics'] = lyrics_map
+
+        all_info = info_map.copy()
+        all_info.update(more_info)
+
+        return all_info
+
+    found_coordinates = map(add_more_info, found_coordinates)
+
     return json_response(found_coordinates)
 
 
