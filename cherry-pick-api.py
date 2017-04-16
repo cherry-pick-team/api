@@ -154,7 +154,7 @@ def search():
 
         return all_info
 
-    found_coordinates = map(add_more_info, found_coordinates)
+    found_coordinates = list(map(add_more_info, found_coordinates))
 
     return json_response(found_coordinates)
 
