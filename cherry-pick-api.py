@@ -151,6 +151,7 @@ def search():
 
         all_info = info_map.copy()
         all_info.update(more_info)
+        all_info.update(info)
 
         return all_info
 
