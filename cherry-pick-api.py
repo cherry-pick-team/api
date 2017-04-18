@@ -153,6 +153,9 @@ def search():
         all_info.update(more_info)
         all_info.update(info)
 
+        if all_info.get('album') is None:
+            all_info['album'] = {}
+
         return all_info
 
     found_coordinates = list(map(add_more_info, found_coordinates))
