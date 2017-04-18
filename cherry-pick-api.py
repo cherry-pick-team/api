@@ -141,7 +141,7 @@ def search_popular():
         })
 
     result = postgres.get_popular_queries(limit)
-    result = list(map(lambda query: {'query': query}))
+    result = list(map(lambda query: {'query': query}, result))
 
     return json_response(result)
 
