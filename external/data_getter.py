@@ -201,7 +201,7 @@ class PsgClient(object):
             if rows:
                 result = []
                 for row in rows:
-                    query = id[0]
+                    query = row[0]
                     result.append(query)
                 return result
             else:
