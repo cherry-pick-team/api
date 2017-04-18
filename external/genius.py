@@ -1,5 +1,6 @@
 import requests
 
+from pymemcache.client.base import Client
 
 class Genius(object):
     def __init__(self, token):
@@ -7,8 +8,26 @@ class Genius(object):
         self.base_url = 'http://api.genius.com'
         self.headers = {'Authorization': 'Bearer %s' % self.genius_key}
 
+         def json_serializer(key, value):
+             if type(value) == str:
+                 return value, 1
+             return json.dumps(value), 2
+
+         def json_deserializer(key, value, flags):
+             if flags == 1:
+                 return value
+             if flags == 2:
+                 return json.loads(value)
+             raise Exception("Unknown serialization format")
+        self.cache = Client(('cache', 11211), serializer=json_serializer, deserializer=json_deserializer)
+
     def get_info(self, id):
         search_url = self.base_url + '/songs/{}'.format(id)
+
+        cached_result = self.cache.get(search_url)
+        if cached_result:
+            return cached_result
+
         response = requests.get(search_url, headers=self.headers)
         json = response.json()
         print(id)
@@ -37,4 +56,6 @@ class Genius(object):
                 'id': featured_artist['id'],
                 'name': featured_artist['name'],
             })
+
+        self.cache.set(search_url, info)
         return info
