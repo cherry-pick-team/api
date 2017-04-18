@@ -101,6 +101,15 @@ class PsgClient(object):
         LIMIT {};
         '''
 
+        self.popular_song_ids = '''
+        SELECT
+            qs.songid
+        FROM query_song AS qs
+        GROUP BY qs.songid
+        ORDER BY COUNT(*) DESC
+        LIMIT {};
+        '''
+
     def get_lyrics_map(self, songid):
         cur = self.conn.cursor()
         try:
@@ -208,6 +217,26 @@ class PsgClient(object):
                 return []
         except Exception as e:
             logger.error('Failed to get popular queries')
+            logger.error(e)
+            return []
+        finally:
+            cur.close()
+
+    def get_popular_song_ids(self, limit=10):
+        cur = self.conn.cursor()
+        try:
+            cur.execute(self.popular_song_ids.format(limit))
+            rows = cur.fetchall()
+            if rows:
+                result = []
+                for row in rows:
+                    query = row[0]
+                    result.append(query)
+                return result
+            else:
+                return []
+        except Exception as e:
+            logger.error('Failed to get popular songs')
             logger.error(e)
             return []
         finally:
