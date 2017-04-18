@@ -84,6 +84,23 @@ class PsgClient(object):
         ORDER BY t.start_time_ms;
         '''
 
+        self.add_to_query_history = '''
+        INSERT INTO query_history (query) VALUES(%s);
+        '''
+
+        self.add_to_song_history = '''
+        INSERT INTO song_history (songId) VALUES(%s);
+        '''
+
+        self.popular_queries = '''
+        SELECT
+            qh.query
+        FROM query_history AS qh
+        GROUP BY qh.query
+        ORDER BY COUNT(*) DESC
+        LIMIT {};
+        '''
+
     def get_lyrics_map(self, songid):
         cur = self.conn.cursor()
         try:
@@ -147,6 +164,52 @@ class PsgClient(object):
             logger.error('Failed to get song with id=`{}`'.format(id))
             logger.error(e)
             return {}
+        finally:
+            cur.close()
+
+    def add_query_history(self, query):
+        cur = self.conn.cursor()
+        try:
+            cur.execute(self.add_to_query_history, (query,))
+            self.conn.commit()
+        except Exception as e:
+            self.conn.rollback()
+            logger.error('Failed to add query to history: `{}`'.format(query))
+            logger.error(e)
+            return {}
+        finally:
+            cur.close()
+
+    def add_song_history(self, id):
+        cur = self.conn.cursor()
+        try:
+            cur.execute(self.add_to_song_history, (id,))
+            self.conn.commit()
+        except Exception as e:
+            self.conn.rollback()
+            logger.error('Failed to add song to history: `{}`'.format(id))
+            logger.error(e)
+            return {}
+        finally:
+            cur.close()
+
+    def get_popular_queries(self, limit=10):
+        cur = self.conn.cursor()
+        try:
+            cur.execute(self.popular_queries.format(limit))
+            rows = cur.fetchall()
+            if rows:
+                result = []
+                for row in rows:
+                    query = id[0]
+                    result.append(query)
+                return result
+            else:
+                return []
+        except Exception as e:
+            logger.error('Failed to get popular queries')
+            logger.error(e)
+            return []
         finally:
             cur.close()
 

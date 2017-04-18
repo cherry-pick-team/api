@@ -47,51 +47,26 @@ def not_found(error):
         ]
     })
 
+def add_more_info_about_song(info):
+    more_info = postgres.get_song_info_by_id(info['id'])
+    info_map = genius.get_info(more_info['genius_id'])
+    lyrics_map = postgres.get_lyrics_map(info['id'])
+    if lyrics_map:
+        info_map['timestamp_lyrics'] = lyrics_map
 
-def generate_song_mock(i, query=''):
-    HOST = request.scheme + '://' + request.host
-    return {
-        'song': {
-            'id': str(i),
-            'title': 'Song ' + query + ' #' + str(i),
-            'singers': [
-                {
-                    'id': str(1000000000 + i + 1),
-                    'name': 'Singer #' + str(1000000000 + i + 1),
-                },
-                {
-                    'id': str(1000000000 + i + 50),
-                    'name': 'Singer #' + str(1000000000 + i + 50),
-                }
-            ]
-        },
-        'album': {
-            'id': str(5000000000 + i + 61),
-            'name': 'Album ' + query + ' #' + str(5000000000 + i + 61),
-            'year': str(1990 + i % 20),
-            'cover_url': 'http://placehold.it/300x300',
-        },
-        'url': HOST + '/api/v2/song/' + str(i) + '/info',
-        'url_stream': HOST + '/api/v2/song/' + str(i) + '/stream',
-        'favourite_count': (1007 * i) % 19,
-        'is_favourite': False,
-        'pieces': [
-            {
-                'begin': '1.720',
-                'end': '10.356',
-                'lines': [
-                    u"Я от тебя письма не получаю " + query
-                ]
-            },
-            {
-                'begin': '11.720',
-                'end': '17.356',
-                'lines': [
-                    u"Ты далеко и даже не скучаешь"
-                ]
-            },
-        ]
-    }
+    all_info = info_map.copy()
+    all_info.update(more_info)
+    all_info.update(info)
+
+    if all_info.get('album') is None:
+        cover_num = (int(all_info.get('id')) % 6) + 1
+        all_info['album'] = {
+                'id': 0,
+                'name': '',
+                'cover_url': 'http://cherry.nksoff.ru/static/no_cover_' + str(cover_num) + '.png'
+        }
+
+    return all_info
 
 
 @app.route('/api/v2/search', methods=['GET'])
@@ -141,29 +116,11 @@ def search():
             ]
         })
     found_coordinates = postgres.get_all_song_ids_and_timestamps(found_ids)
+    found_coordinates = list(map(add_more_info_about_song, found_coordinates))
 
-    def add_more_info(info):
-        more_info = postgres.get_song_info_by_id(info['id'])
-        info_map = genius.get_info(more_info['genius_id'])
-        lyrics_map = postgres.get_lyrics_map(info['id'])
-        if lyrics_map:
-            info_map['timestamp_lyrics'] = lyrics_map
-
-        all_info = info_map.copy()
-        all_info.update(more_info)
-        all_info.update(info)
-
-        if all_info.get('album') is None:
-            cover_num = (int(all_info.get('id')) % 6) + 1
-            all_info['album'] = {
-                    'id': 0,
-                    'name': '',
-                    'cover_url': 'http://cherry.nksoff.ru/static/no_cover_' + str(cover_num) + '.png'
-            }
-
-        return all_info
-
-    found_coordinates = list(map(add_more_info, found_coordinates))
+    # save history
+    postgres.add_query_history(query)
+    map(lambda song: postgres.add_song_history(song['id']), found_coordinates)
 
     return json_response(found_coordinates)
 
@@ -183,21 +140,8 @@ def search_popular():
             ]
         })
 
-    result = []
-
-    for i in range(1, limit + 1):
-        result.append([18900000000000 + i*100, 'rand query ' + str(i)])
-
-    shuffle(result)
-
-    def gen(i , q):
-        return [
-                generate_song_mock(i+ 1, q),
-                generate_song_mock(i+ 8, q),
-                generate_song_mock(i+ 5, q),
-                ]
-
-    result = map(lambda x: {'query': x[1], 'songs' : gen(x[0], x[1])}, result)
+    result = postgres.get_popular_queries(limit)
+    result = map(lambda query: {'query': query})
 
     return json_response(result)
 
