@@ -103,9 +103,9 @@ class PsgClient(object):
 
         self.popular_song_ids = '''
         SELECT
-            qs.songid
-        FROM query_song AS qs
-        GROUP BY qs.songid
+            sh.songid
+        FROM song_history AS sh
+        GROUP BY sh.songid
         ORDER BY COUNT(*) DESC
         LIMIT {};
         '''
