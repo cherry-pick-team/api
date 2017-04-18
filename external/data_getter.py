@@ -89,7 +89,7 @@ class PsgClient(object):
         '''
 
         self.add_to_song_history = '''
-        INSERT INTO song_history (songId) VALUES(%s);
+        INSERT INTO song_history (songId) VALUES(%d);
         '''
 
         self.popular_queries = '''

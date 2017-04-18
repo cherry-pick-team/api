@@ -106,6 +106,8 @@ def search():
             ]
         })
 
+    postgres.add_query_history(query)
+
     found_ids = sphinx.find_songs(query)
     if not found_ids:
         return jsonify({
@@ -118,9 +120,8 @@ def search():
     found_coordinates = postgres.get_all_song_ids_and_timestamps(found_ids)
     found_coordinates = list(map(add_more_info_about_song, found_coordinates))
 
-    # save history
-    postgres.add_query_history(query)
-    map(lambda song: postgres.add_song_history(song['id']), found_coordinates)
+    for song in found_coordinates:
+        postgres.add_song_history(song['id'])
 
     return json_response(found_coordinates)
 
@@ -168,6 +169,8 @@ def song_id_info(song_id):
                     'id',
                 ]
             })
+
+    postgres.add_song_history(song_id)
 
     info_map = genius.get_info(info['genius_id'])
     lyrics_map = postgres.get_lyrics_map(song_id)
