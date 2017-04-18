@@ -89,7 +89,7 @@ class PsgClient(object):
         '''
 
         self.add_to_song_history = '''
-        INSERT INTO song_history (songId) VALUES(%d);
+        INSERT INTO song_history (songid) VALUES(%s);
         '''
 
         self.popular_queries = '''
@@ -180,16 +180,16 @@ class PsgClient(object):
         finally:
             cur.close()
 
-    def add_song_history(self, id):
+    def add_song_history(self, _id):
         cur = self.conn.cursor()
         try:
-            cur.execute(self.add_to_song_history, (id,))
+            logger.info('Add song to history: `{}`'.format(_id))
+            cur.execute(self.add_to_song_history, (_id,))
             self.conn.commit()
         except Exception as e:
             self.conn.rollback()
-            logger.error('Failed to add song to history: `{}`'.format(id))
+            logger.error('Failed to add song to history: `{}`'.format(_id))
             logger.error(e)
-            return {}
         finally:
             cur.close()
 
