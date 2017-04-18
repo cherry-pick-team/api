@@ -142,8 +142,6 @@ def search():
         })
     found_coordinates = postgres.get_all_song_ids_and_timestamps(found_ids)
 
-    HOST = request.scheme + '://' + request.host
-
     def add_more_info(info):
         more_info = postgres.get_song_info_by_id(info['id'])
         info_map = genius.get_info(more_info['genius_id'])
@@ -160,7 +158,7 @@ def search():
             all_info['album'] = {
                     'id': 0,
                     'name': '',
-                    'cover_url': HOST + '/static/no_cover_' + str(cover_num) + '.png'
+                    'cover_url': 'http://cherry.nksoff.ru/static/no_cover_' + str(cover_num) + '.png'
             }
 
         return all_info
