@@ -200,10 +200,8 @@ def song_id_info(song_id):
     return json_response(info_map)
 
 
-@app.route('/api/v2/song/<song_id>/stream/<from>/<to>', methods=['GET'])
-def song_id_stream(song_id):
-    parts = get_arg('parts')
-
+@app.route('/api/v2/song/<song_id>/stream/<from_ms>/<to_ms>', methods=['GET'])
+def song_id_stream(song_id, from_ms, to_ms):
     try:
         song_id = int(song_id)
     except ValueError:
@@ -213,7 +211,7 @@ def song_id_stream(song_id):
     if not info:
         return ''
 
-    return json_response(info)
+    return cropper.get_song(info['mongo_id'], [[int(from_ms), int(to_ms)]])
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')
