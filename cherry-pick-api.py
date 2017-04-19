@@ -200,5 +200,20 @@ def song_id_info(song_id):
     return json_response(info_map)
 
 
+@app.route('/api/v2/song/<song_id>/stream/<from>/<to>', methods=['GET'])
+def song_id_stream(song_id):
+    parts = get_arg('parts')
+
+    try:
+        song_id = int(song_id)
+    except ValueError:
+        return ''
+
+    info = postgres.get_song_info_by_id(song_id)
+    if not info:
+        return ''
+
+    return json_response(info)
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0')
