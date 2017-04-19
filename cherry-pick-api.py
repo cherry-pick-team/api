@@ -211,7 +211,10 @@ def song_id_stream(song_id, from_ms, to_ms):
     if not info:
         return ''
 
-    return cropper.get_song(info['mongo_id'], [[int(from_ms), int(to_ms)]])
+    res = cropper.get_song(info['mongo_id'], [[int(from_ms), int(to_ms)]])
+
+    if res:
+        return res.text
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')
