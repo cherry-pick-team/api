@@ -38,22 +38,38 @@ def get_lengths(ts):
 
 class SphinxSearch(object):
     def __init__(self, host, port, user, password):
-        self.connection = pymysql.connect(host=host, port=port, user=user, passwd=password, charset='utf8', db='')
+        self.host = host
+        self.port = port
+        self.user = user
+        self.password = password
+        self.connect()
 
-    def find_songs(self, key_word):
-        with self.connection.cursor() as cursor:
-            # supposed to be injection free
-            # http://initd.org/psycopg/docs/usage.html#the-problem-with-the-query-parameters
-            cursor.execute('select * from songs_search where match(%s);', (key_word,))
-            result = cursor.fetchall()
-        return [
-            int(x[0])
-            for x in result
-            if x and len(x) > 0
-        ]
+    def connect(self):
+        self.connection = pymysql.connect(host=self.host, port=self.port, user=self.user, passwd=self.password, charset='utf8', db='')
+
+    def find_songs(self, key_word, recurse_on_fail=True):
+        try:
+            with self.connection.cursor() as cursor:
+                # supposed to be injection free
+                # http://initd.org/psycopg/docs/usage.html#the-problem-with-the-query-parameters
+                cursor.execute('select * from songs_search where match(%s);', (key_word,))
+                result = cursor.fetchall()
+            return [
+                int(x[0])
+                for x in result
+                if x and len(x) > 0
+            ]
+        except:
+            if recurse_on_fail:
+                self.close()
+                self.connect()
+                return find_songs(key_word, recurse_on_fail=False)
+            else:
+                return []
 
     def close(self):
-        self.connection.close()
+        if self.connection is not None:
+            self.connection.close()
 
 
 class PsgClient(object):
