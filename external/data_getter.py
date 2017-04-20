@@ -63,7 +63,7 @@ class SphinxSearch(object):
             if recurse_on_fail:
                 self.close()
                 self.connect()
-                return find_songs(key_word, recurse_on_fail=False)
+                return self.find_songs(key_word, recurse_on_fail=False)
             else:
                 return []
 
