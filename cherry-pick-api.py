@@ -8,6 +8,9 @@ from flask import jsonify, request
 
 from config import genius, sphinx, postgres, cropper
 
+from transliterate import translit
+
+
 app = Flask(__name__)
 app.debug = True
 
@@ -106,7 +109,10 @@ def search():
                 'page',
             ]
         })
-
+    try:
+        query = translit(query, reversed=True)
+    except Exception as e:
+        pass
     postgres.add_query_history(query)
 
     found_ids = sphinx.find_songs(query)
