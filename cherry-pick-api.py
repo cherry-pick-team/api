@@ -214,8 +214,7 @@ def song_id_stream(song_id, from_ms, to_ms):
 
     res = cropper.get_song(info['mongo_id'], [[int(from_ms), int(to_ms)]])
 
-    if res:
-        return res.text
+    return Response(res.text, mimetype='audio/mpeg')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')
