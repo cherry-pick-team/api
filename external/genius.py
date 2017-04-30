@@ -3,6 +3,7 @@ import json
 
 from pymemcache.client.base import Client
 
+
 class Genius(object):
     def __init__(self, token):
         self.genius_key = token

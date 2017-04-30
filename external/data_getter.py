@@ -45,7 +45,8 @@ class SphinxSearch(object):
         self.connect()
 
     def connect(self):
-        self.connection = pymysql.connect(host=self.host, port=self.port, user=self.user, passwd=self.password, charset='utf8', db='')
+        self.connection = pymysql.connect(
+            host=self.host, port=self.port, user=self.user, passwd=self.password, charset='utf8', db='')
 
     def find_songs(self, key_word, recurse_on_fail=True):
         try:
@@ -89,8 +90,11 @@ class PsgClient(object):
         FROM songs AS s
         WHERE s.id=%s;
         '''
-        self.conn = psycopg2.connect('postgres://{}:{}@{}:5432/{}'.format
-                                     (user, password, host, db_name))
+        self.db_name = db_name
+        self.db_host = host
+        self.db_user = user
+        self.db_password = password
+        self.conn = psycopg2.connect('postgres://{}:{}@{}:5432/{}'.format(user, password, host, db_name))
 
         self.get_ordered_lyrics_map = '''
         SELECT
@@ -127,6 +131,9 @@ class PsgClient(object):
         '''
 
     def get_lyrics_map(self, songid):
+        if self.conn.closed:
+            self.conn = psycopg2.connect('postgres://{}:{}@{}:5432/{}'.format(
+                self.db_user, self.db_password, self.db_host, self.db_name))
         cur = self.conn.cursor()
         try:
             cur.execute(self.get_ordered_lyrics_map, (songid,))
@@ -145,6 +152,9 @@ class PsgClient(object):
             cur.close()
 
     def get_all_song_ids_and_timestamps(self, ids):
+        if self.conn.closed:
+            self.conn = psycopg2.connect('postgres://{}:{}@{}:5432/{}'.format(
+                self.db_user, self.db_password, self.db_host, self.db_name))
         cur = self.conn.cursor()
         try:
             cur.execute(self.select_unique_songs, (ids,))
@@ -173,6 +183,9 @@ class PsgClient(object):
             cur.close()
 
     def get_song_info_by_id(self, id):
+        if self.conn.closed:
+            self.conn = psycopg2.connect('postgres://{}:{}@{}:5432/{}'.format(
+                self.db_user, self.db_password, self.db_host, self.db_name))
         cur = self.conn.cursor()
         try:
             cur.execute(self.select_song, (id,))
@@ -193,6 +206,9 @@ class PsgClient(object):
             cur.close()
 
     def add_query_history(self, query):
+        if self.conn.closed:
+            self.conn = psycopg2.connect('postgres://{}:{}@{}:5432/{}'.format(
+                self.db_user, self.db_password, self.db_host, self.db_name))
         cur = self.conn.cursor()
         try:
             cur.execute(self.add_to_query_history, (query,))
@@ -206,6 +222,9 @@ class PsgClient(object):
             cur.close()
 
     def add_song_history(self, _id):
+        if self.conn.closed:
+            self.conn = psycopg2.connect('postgres://{}:{}@{}:5432/{}'.format(
+                self.db_user, self.db_password, self.db_host, self.db_name))
         cur = self.conn.cursor()
         try:
             logger.info('Add song to history: `{}`'.format(_id))
@@ -219,6 +238,9 @@ class PsgClient(object):
             cur.close()
 
     def get_popular_queries(self, limit=10):
+        if self.conn.closed:
+            self.conn = psycopg2.connect('postgres://{}:{}@{}:5432/{}'.format(
+                self.db_user, self.db_password, self.db_host, self.db_name))
         cur = self.conn.cursor()
         try:
             cur.execute(self.popular_queries.format(limit))
@@ -239,6 +261,9 @@ class PsgClient(object):
             cur.close()
 
     def get_popular_song_ids(self, limit=10):
+        if self.conn.closed:
+            self.conn = psycopg2.connect('postgres://{}:{}@{}:5432/{}'.format(
+                self.db_user, self.db_password, self.db_host, self.db_name))
         cur = self.conn.cursor()
         try:
             cur.execute(self.popular_song_ids.format(limit))

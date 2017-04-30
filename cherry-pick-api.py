@@ -47,6 +47,7 @@ def not_found(error):
         ]
     })
 
+
 def add_more_info_about_song(info):
     more_info = postgres.get_song_info_by_id(info['id'])
     info_map = genius.get_info(more_info['genius_id'])
