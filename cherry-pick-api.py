@@ -53,9 +53,7 @@ def song_full_pack_info(incoming_info):
     song_basic_info = postgres.get_song_info_by_id(incoming_info['id'])
     if not song_basic_info:
         return {}
-    song_basic_info.update({
-        'id': incoming_info['id'],
-    })
+    song_basic_info.update(incoming_info)
     album_basic_info = postgres.get_album_info(song_basic_info['album_id'])
     if not album_basic_info:
         return song_basic_info
