@@ -5,6 +5,8 @@ import json
 import psycopg2
 import pymysql.cursors
 import requests
+from gridfs import GridFS
+from pymongo import MongoClient
 
 logger = logging.getLogger('data-getter')
 logger.addHandler(logging.StreamHandler())
@@ -321,3 +323,17 @@ class CropperDemon(object):
             'intervals': intervals
         }
         return requests.post(self.request_path, data=json.dumps(request_json))
+
+
+class MongoC(object):
+    def __init__(self, host, db_name, collection):
+        self.connect_info = 'mongodb://{}:27017/'.format(host)
+        self.db_name = db_name
+        self.collection = collection
+
+    def get_cover(self, cover_id):
+        client = MongoClient(self.connect_info)
+        fs = GridFS(client[self.db_name], self.collection)
+        cover = fs.get(cover_id)
+        if cover:
+            return cover.read()

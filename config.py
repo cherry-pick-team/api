@@ -8,6 +8,7 @@ try:
     postgres = data_getter.PsgClient(
         os.environ['PSQL_HOST'], os.environ['PSQL_USER'], os.environ['PSQL_PASSWORD'], 'track_bar')
     cropper = data_getter.CropperDemon(os.environ['CROPPER_HOST'], 8880)
+    mongo = data_getter.MongoC(os.environ['MONGO_HOST'], 'test', 'fs')
 except Exception as e:
     print(e)
     sys.exit(1)
