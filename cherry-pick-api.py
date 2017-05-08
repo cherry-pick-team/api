@@ -53,6 +53,9 @@ def song_full_pack_info(incoming_info):
     song_basic_info = postgres.get_song_info_by_id(incoming_info['id'])
     if not song_basic_info:
         return {}
+    song_basic_info.update({
+        'id': incoming_info['id'],
+    })
     album_basic_info = postgres.get_album_info(song_basic_info['album_id'])
     if not album_basic_info:
         return song_basic_info
@@ -184,7 +187,7 @@ def search():
     found_coordinates = list(map(song_full_pack_info, found_coordinates))
 
     for song in found_coordinates:
-        postgres.add_song_history(song['id'])
+        postgres.add_song_history(song.get('id'))
 
     return json_response(found_coordinates)
 

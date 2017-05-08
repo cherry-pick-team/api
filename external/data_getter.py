@@ -230,6 +230,8 @@ class PsgClient(object):
             cur.close()
 
     def add_song_history(self, _id):
+        if not _id:
+            return
         if self.conn.closed:
             self.conn = psycopg2.connect('postgres://{}:{}@{}:5432/{}'.format(
                 self.db_user, self.db_password, self.db_host, self.db_name))
