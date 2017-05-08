@@ -51,26 +51,65 @@ def not_found(error):
     })
 
 
-def add_more_info_about_song(info):
-    more_info = postgres.get_song_info_by_id(info['id'])
-    info_map = genius.get_info(more_info['genius_id'])
+def song_full_pack_info(info):
+    song_basic_info = postgres.get_song_info_by_id(info['id'])
+    if not song_basic_info:
+        return {}
+    album_basic_info = postgres.get_album_info(song_basic_info['album_id'])
+    if not album_basic_info:
+        return song_basic_info
+
+    info = {
+        'song': {
+            'id': info['id'],
+            'title': song_basic_info['title'],
+            'singers': [
+                {
+                    'name': song_basic_info['author'],
+                }
+            ]
+        },
+        'album': {
+            'id': song_basic_info['album_id'],
+            'name': album_basic_info['title'],
+            'cover_url': album_basic_info['cover_id'],
+            'year': album_basic_info['year']
+        }
+    }
     lyrics_map = postgres.get_lyrics_map(info['id'])
     if lyrics_map:
-        info_map['timestamp_lyrics'] = lyrics_map
+        info['timestamp_lyrics'] = lyrics_map
 
-    all_info = info_map.copy()
-    all_info.update(more_info)
-    all_info.update(info)
-
-    if all_info.get('album') is None:
-        cover_num = (int(all_info.get('id')) % 6) + 1
-        all_info['album'] = {
+    if info.get('album') is None:
+        cover_num = (int(info.get('id')) % 6) + 1
+        info['album'] = {
                 'id': 0,
                 'name': '',
                 'cover_url': 'http://cherry.nksoff.ru/static/no_cover_' + str(cover_num) + '.png'
         }
+    return info
 
-    return all_info
+#
+# def add_more_info_about_song(info):
+#     more_info = postgres.get_song_info_by_id(info['id'])
+#     info_map = postgres.get_info(info['id'])
+#     lyrics_map = postgres.get_lyrics_map(info['id'])
+#     if lyrics_map:
+#         info_map['timestamp_lyrics'] = lyrics_map
+#
+#     all_info = info_map.copy()
+#     all_info.update(more_info)
+#     all_info.update(info)
+#
+#     if all_info.get('album') is None:
+#         cover_num = (int(all_info.get('id')) % 6) + 1
+#         all_info['album'] = {
+#                 'id': 0,
+#                 'name': '',
+#                 'cover_url': 'http://cherry.nksoff.ru/static/no_cover_' + str(cover_num) + '.png'
+#         }
+#
+#     return all_info
 
 
 @app.route('/api/v2/search', methods=['GET'])
@@ -125,7 +164,7 @@ def search():
             ]
         })
     found_coordinates = postgres.get_all_song_ids_and_timestamps(found_ids)
-    found_coordinates = list(map(add_more_info_about_song, found_coordinates))
+    found_coordinates = list(map(song_full_pack_info, found_coordinates))
 
     for song in found_coordinates:
         postgres.add_song_history(song['id'])
@@ -170,7 +209,7 @@ def song_popular():
         })
 
     result = postgres.get_popular_song_ids(limit)
-    result = list(map(lambda _id: add_more_info_about_song({'id' : _id}), result))
+    result = list(map(lambda _id: song_full_pack_info({'id' : _id}), result))
 
     return json_response(result)
 
