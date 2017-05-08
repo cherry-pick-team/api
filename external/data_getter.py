@@ -5,6 +5,8 @@ import json
 import psycopg2
 import pymysql.cursors
 import requests
+from gridfs import GridFS
+from pymongo import MongoClient
 
 logger = logging.getLogger('data-getter')
 logger.addHandler(logging.StreamHandler())
@@ -76,17 +78,23 @@ class SphinxSearch(object):
 class PsgClient(object):
     def __init__(self, host, user, password, db_name):
         self.select_unique_songs = '''
-        SELECT t.songid, s.genius_id, s.file_id, array_agg(t.start_time_ms), array_agg(t.end_time_ms)
+        SELECT t.songid, s.album_id, s.file_id, array_agg(t.start_time_ms), array_agg(t.end_time_ms)
         FROM transcription AS t
         JOIN songs AS s
         ON s.id = t.songid
         WHERE t.id=any(%s)
-        GROUP BY t.songid, s.genius_id, s.file_id;
+        GROUP BY t.songid, s.album_id, s.file_id;
+        '''
+
+        self.select_album = '''
+        SELECT title, cover_id, year
+        FROM album
+        where id=%s;
         '''
 
         self.select_song = '''
         SELECT
-            s.author, s.title, s.lyrics, s.file_id, s.genius_id
+            s.author, s.title, s.lyrics, s.file_id, s.album_id
         FROM songs AS s
         WHERE s.id=%s;
         '''
@@ -163,14 +171,14 @@ class PsgClient(object):
                 result = []
                 for id in ids_plus_chunks:
                     song_id = id[0]
-                    genius_id = id[1]
+                    album_id = id[1]
                     mongo_path = id[2]
                     ts = [list(i) for i in zip(id[3], id[4])]
                     res_list = get_lengths(ts)
                     if res_list:
                         result.append({
                             'id': song_id,
-                            'genius_id': genius_id,
+                            'album_id': album_id,
                             'mongo_path': mongo_path,
                             'chunks': res_list
                         })
@@ -196,7 +204,7 @@ class PsgClient(object):
                     'title': value[1],
                     'lyrics': value[2],
                     'mongo_id': value[3],
-                    'genius_id': value[4]
+                    'album_id': value[4]
                 }
         except Exception as e:
             logger.error('Failed to get song with id=`{}`'.format(id))
@@ -222,6 +230,8 @@ class PsgClient(object):
             cur.close()
 
     def add_song_history(self, _id):
+        if not _id:
+            return
         if self.conn.closed:
             self.conn = psycopg2.connect('postgres://{}:{}@{}:5432/{}'.format(
                 self.db_user, self.db_password, self.db_host, self.db_name))
@@ -283,6 +293,27 @@ class PsgClient(object):
         finally:
             cur.close()
 
+    def get_album_info(self, id):
+        if self.conn.closed:
+            self.conn = psycopg2.connect('postgres://{}:{}@{}:5432/{}'.format(
+                self.db_user, self.db_password, self.db_host, self.db_name))
+        cur = self.conn.cursor()
+        try:
+            cur.execute(self.select_album, (id,))
+            value = cur.fetchone()
+            if value and len(value) > 2:
+                return {
+                    'title': value[0],
+                    'cover_id': value[1],
+                    'year': value[2]
+                }
+        except Exception as e:
+            logger.error('Failed to get popular songs')
+            logger.error(e)
+            return []
+        finally:
+            cur.close()
+
 
 class CropperDemon(object):
     def __init__(self, host, port):
@@ -294,3 +325,17 @@ class CropperDemon(object):
             'intervals': intervals
         }
         return requests.post(self.request_path, data=json.dumps(request_json))
+
+
+class MongoC(object):
+    def __init__(self, host, db_name, collection):
+        self.connect_info = 'mongodb://{}:27017/'.format(host)
+        self.db_name = db_name
+        self.collection = collection
+
+    def get_cover(self, cover_id):
+        client = MongoClient(self.connect_info)
+        fs = GridFS(client[self.db_name], self.collection)
+        cover = fs.get(cover_id)
+        if cover:
+            return cover.read()

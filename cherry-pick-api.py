@@ -4,12 +4,10 @@ from random import shuffle
 
 from flask import Flask
 from flask import Response
-from flask import jsonify, request
+from flask import jsonify, request, send_file
 
-from config import genius, sphinx, postgres, cropper
-
-from transliterate import translit
-
+from config import mongo, sphinx, postgres, cropper
+from external import data_getter
 
 app = Flask(__name__)
 app.debug = True
@@ -51,26 +49,89 @@ def not_found(error):
     })
 
 
-def add_more_info_about_song(info):
-    more_info = postgres.get_song_info_by_id(info['id'])
-    info_map = genius.get_info(more_info['genius_id'])
-    lyrics_map = postgres.get_lyrics_map(info['id'])
+def song_full_pack_info(incoming_info):
+    song_basic_info = postgres.get_song_info_by_id(incoming_info['id'])
+    if not song_basic_info:
+        return {}
+    song_basic_info.update(incoming_info)
+    album_basic_info = postgres.get_album_info(song_basic_info['album_id'])
+    if not album_basic_info:
+        return song_basic_info
+
+    song_basic_info.update({
+        'song': {
+            'id': incoming_info['id'],
+            'title': song_basic_info['title'],
+            'singers': [
+                {
+                    'name': song_basic_info['author'],
+                }
+            ]
+        },
+        'album': {
+            'id': song_basic_info['album_id'],
+            'name': album_basic_info['title'],
+            'cover_url': album_basic_info['cover_id'],
+            'year': album_basic_info['year']
+        }
+    })
+    lyrics_map = postgres.get_lyrics_map(incoming_info['id'])
     if lyrics_map:
-        info_map['timestamp_lyrics'] = lyrics_map
+        song_basic_info['timestamp_lyrics'] = lyrics_map
 
-    all_info = info_map.copy()
-    all_info.update(more_info)
-    all_info.update(info)
-
-    if all_info.get('album') is None:
-        cover_num = (int(all_info.get('id')) % 6) + 1
-        all_info['album'] = {
+    if song_basic_info.get('album') is None:
+        cover_num = (int(song_basic_info.get('id')) % 6) + 1
+        song_basic_info['album'] = {
                 'id': 0,
                 'name': '',
                 'cover_url': 'http://cherry.nksoff.ru/static/no_cover_' + str(cover_num) + '.png'
         }
+    return song_basic_info
 
-    return all_info
+#
+# def add_more_info_about_song(info):
+#     more_info = postgres.get_song_info_by_id(info['id'])
+#     info_map = postgres.get_info(info['id'])
+#     lyrics_map = postgres.get_lyrics_map(info['id'])
+#     if lyrics_map:
+#         info_map['timestamp_lyrics'] = lyrics_map
+#
+#     all_info = info_map.copy()
+#     all_info.update(more_info)
+#     all_info.update(info)
+#
+#     if all_info.get('album') is None:
+#         cover_num = (int(all_info.get('id')) % 6) + 1
+#         all_info['album'] = {
+#                 'id': 0,
+#                 'name': '',
+#                 'cover_url': 'http://cherry.nksoff.ru/static/no_cover_' + str(cover_num) + '.png'
+#         }
+#
+#     return all_info
+
+
+@app.route('/api/v2/cover', methods=['GET'])
+def cover():
+    path = get_arg('path', None)
+    if path is None or path == '':
+        return jsonify({
+            'code': '400',
+            'message': 'empty query',
+            'fields': [
+                'path',
+            ]
+        })
+    cover = mongo.get_cover(path)
+    if not cover:
+        return jsonify({
+            'code': '404',
+            'message': 'Found nothing',
+            'fields': [
+                'id',
+            ]
+        })
+    return send_file(cover, mimetype='image/jpg')
 
 
 @app.route('/api/v2/search', methods=['GET'])
@@ -109,12 +170,8 @@ def search():
                 'page',
             ]
         })
-    try:
-        query = translit(query, reversed=True)
-    except Exception as e:
-        pass
-    postgres.add_query_history(query)
 
+    postgres.add_query_history(query)
     found_ids = sphinx.find_songs(query)
     if not found_ids:
         return jsonify({
@@ -125,10 +182,10 @@ def search():
             ]
         })
     found_coordinates = postgres.get_all_song_ids_and_timestamps(found_ids)
-    found_coordinates = list(map(add_more_info_about_song, found_coordinates))
+    found_coordinates = list(map(song_full_pack_info, found_coordinates))
 
     for song in found_coordinates:
-        postgres.add_song_history(song['id'])
+        postgres.add_song_history(song.get('id'))
 
     return json_response(found_coordinates)
 
@@ -170,7 +227,7 @@ def song_popular():
         })
 
     result = postgres.get_popular_song_ids(limit)
-    result = list(map(lambda _id: add_more_info_about_song({'id' : _id}), result))
+    result = list(map(lambda _id: song_full_pack_info({'id' : _id}), result))
 
     return json_response(result)
 
@@ -197,14 +254,7 @@ def song_id_info(song_id):
                     'id',
                 ]
             })
-
-    postgres.add_song_history(song_id)
-
-    info_map = genius.get_info(info['genius_id'])
-    lyrics_map = postgres.get_lyrics_map(song_id)
-    if lyrics_map:
-        info_map['timestamp_lyrics'] = lyrics_map
-    return json_response(info_map)
+    return song_full_pack_info({'id': song_id})
 
 
 @app.route('/api/v2/song/<song_id>/stream/<from_ms>/<to_ms>', methods=['GET'])
