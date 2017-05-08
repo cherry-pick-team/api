@@ -7,6 +7,7 @@ import pymysql.cursors
 import requests
 from gridfs import GridFS
 from pymongo import MongoClient
+from bson.objectid import ObjectId
 
 logger = logging.getLogger('data-getter')
 logger.addHandler(logging.StreamHandler())
@@ -336,6 +337,6 @@ class MongoC(object):
     def get_cover(self, cover_id):
         client = MongoClient(self.connect_info)
         fs = GridFS(client[self.db_name], self.collection)
-        cover = fs.get(cover_id)
+        cover = fs.find_one({'_id': ObjectId(cover_id) })
         if cover:
             return cover.read()

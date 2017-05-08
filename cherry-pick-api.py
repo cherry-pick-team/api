@@ -1,5 +1,6 @@
 # coding=utf-8
 import json
+from io import BytesIO  
 from random import shuffle
 
 from flask import Flask
@@ -122,6 +123,7 @@ def cover():
                 'path',
             ]
         })
+    buffer = BytesIO()
     cover = mongo.get_cover(path)
     if not cover:
         return jsonify({
@@ -131,7 +133,10 @@ def cover():
                 'id',
             ]
         })
-    return send_file(cover, mimetype='image/jpg')
+    buffer.write(cover)
+    buffer.seek(0)
+
+    return send_file(buffer,attachment_filename='cover.jpg', mimetype='image/jpg')
 
 
 @app.route('/api/v2/search', methods=['GET'])
