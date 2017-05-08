@@ -6,7 +6,7 @@ from flask import Flask
 from flask import Response
 from flask import jsonify, request
 
-from config import genius, sphinx, postgres, cropper
+from config import sphinx, postgres, cropper
 
 from transliterate import translit
 
