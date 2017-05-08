@@ -51,8 +51,8 @@ def not_found(error):
     })
 
 
-def song_full_pack_info(info):
-    song_basic_info = postgres.get_song_info_by_id(info['id'])
+def song_full_pack_info(incoming_info):
+    song_basic_info = postgres.get_song_info_by_id(incoming_info['id'])
     if not song_basic_info:
         return {}
     album_basic_info = postgres.get_album_info(song_basic_info['album_id'])
@@ -61,7 +61,7 @@ def song_full_pack_info(info):
 
     info = {
         'song': {
-            'id': info['id'],
+            'id': incoming_info['id'],
             'title': song_basic_info['title'],
             'singers': [
                 {
@@ -76,7 +76,7 @@ def song_full_pack_info(info):
             'year': album_basic_info['year']
         }
     }
-    lyrics_map = postgres.get_lyrics_map(info['id'])
+    lyrics_map = postgres.get_lyrics_map(incoming_info['id'])
     if lyrics_map:
         info['timestamp_lyrics'] = lyrics_map
 
