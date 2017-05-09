@@ -123,7 +123,7 @@ class PsgClient(object):
 
         self.popular_queries = '''
         SELECT
-            qh.query
+            qh.query, COUNT(*)
         FROM query_history AS qh
         GROUP BY qh.query
         ORDER BY COUNT(*) DESC
@@ -132,7 +132,7 @@ class PsgClient(object):
 
         self.popular_song_ids = '''
         SELECT
-            sh.songid
+            sh.songid, COUNT(*)
         FROM song_history AS sh
         GROUP BY sh.songid
         ORDER BY COUNT(*) DESC
@@ -260,7 +260,8 @@ class PsgClient(object):
                 result = []
                 for row in rows:
                     query = row[0]
-                    result.append(query)
+                    count = row[1]
+                    result.append({'query': query, 'count': count})
                 return result
             else:
                 return []
@@ -271,7 +272,7 @@ class PsgClient(object):
         finally:
             cur.close()
 
-    def get_popular_song_ids(self, limit=10):
+    def get_popular_songs(self, limit=10):
         if self.conn.closed:
             self.conn = psycopg2.connect('postgres://{}:{}@{}:5432/{}'.format(
                 self.db_user, self.db_password, self.db_host, self.db_name))
@@ -283,7 +284,8 @@ class PsgClient(object):
                 result = []
                 for row in rows:
                     query = row[0]
-                    result.append(query)
+                    count = row[1]
+                    result.append({'id': query, 'count': count})
                 return result
             else:
                 return []

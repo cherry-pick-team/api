@@ -1,6 +1,6 @@
 # coding=utf-8
 import json
-from io import BytesIO  
+from io import BytesIO
 from random import shuffle
 
 from flask import Flask
@@ -211,7 +211,6 @@ def search_popular():
         })
 
     result = postgres.get_popular_queries(limit)
-    result = list(map(lambda query: {'query': query}, result))
 
     return json_response(result)
 
@@ -231,8 +230,8 @@ def song_popular():
             ]
         })
 
-    result = postgres.get_popular_song_ids(limit)
-    result = list(map(lambda _id: song_full_pack_info({'id' : _id}), result))
+    result = postgres.get_popular_songs(limit)
+    result = list(map(song_full_pack_info, result))
 
     return json_response(result)
 
