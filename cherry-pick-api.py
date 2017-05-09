@@ -72,7 +72,7 @@ def song_full_pack_info(incoming_info):
         'album': {
             'id': song_basic_info['album_id'],
             'name': album_basic_info['title'],
-            'cover_url': album_basic_info['cover_id'],
+            'cover_url': 'http://cherry.nksoff.ru/api/v2/cover?path=' + album_basic_info['cover_id'],
             'year': album_basic_info['year']
         }
     })
