@@ -15,28 +15,21 @@ logger.setLevel(logging.DEBUG)
 
 
 def get_lengths(ts):
-    if not ts:
-        return
-    res_list = []
     for sub_list in ts:
         if sub_list[1] - sub_list[0] > 19000:
             return [sub_list]
-        if sub_list[1] - sub_list[0] > 8000:
-            res_list.append(sub_list)
 
-    res_list = res_list if res_list else ts
-    res_list.sort(key=lambda x: x[0] - x[1])
-    res_list = res_list[:3]
-    res_list.sort(key=lambda x: x[0])
+    ts.sort(key=lambda x: x[0] - x[1])
+    ts = ts[:3]
+    ts.sort(key=lambda x: x[0])
 
-    if res_list[-1][1] - res_list[-1][0] < 8000:
-        res_list[-1] = [res_list[-1][0], res_list[-1][1] + 8000]
-
-    out_result = []
-    for sub_list in res_list:
-        if sub_list[1] - sub_list[0] > 8000:
-            out_result.append(sub_list)
-    return out_result
+    res = []
+    for one in ts:
+        if one[1] - one[0] < 4000:
+            res.append([one[0] - 2500, one[1] + 2500, one[2], one[3]])
+        else:
+            res.append(one)
+    return res
 
 
 class SphinxSearch(object):
@@ -75,11 +68,36 @@ class SphinxSearch(object):
         if self.connection is not None:
             self.connection.close()
 
+    def find_songs_indirect(self, key_word, recurse_on_fail=True):
+        try:
+            with self.connection.cursor() as cursor:
+                # supposed to be injection free
+                # http://initd.org/psycopg/docs/usage.html#the-problem-with-the-query-parameters
+                cursor.execute('select * from songs_search_indirect where match(%s);', (key_word,))
+                result = cursor.fetchall()
+            return [
+                int(x[0])
+                for x in result
+                if x and len(x) > 0
+            ]
+        except:
+            if recurse_on_fail:
+                self.close()
+                self.connect()
+                return self.find_songs(key_word, recurse_on_fail=False)
+            else:
+                return []
+
+    def close(self):
+        if self.connection is not None:
+            self.connection.close()
+
+
 
 class PsgClient(object):
     def __init__(self, host, user, password, db_name):
         self.select_unique_songs = '''
-        SELECT t.songid, s.album_id, s.file_id, array_agg(t.start_time_ms), array_agg(t.end_time_ms)
+        SELECT t.songid, s.album_id, s.file_id, array_agg(t.start_time_ms), array_agg(t.end_time_ms), array_agg(t.phrase), array_agg(t.id)
         FROM transcription AS t
         JOIN songs AS s
         ON s.id = t.songid
@@ -174,14 +192,21 @@ class PsgClient(object):
                     song_id = id[0]
                     album_id = id[1]
                     mongo_path = id[2]
-                    ts = [list(i) for i in zip(id[3], id[4])]
+                    ts = [
+                        list(i)
+                        for i in zip(id[3], id[4], id[5], id[6])
+                    ]
                     res_list = get_lengths(ts)
                     if res_list:
                         result.append({
                             'id': song_id,
                             'album_id': album_id,
                             'mongo_path': mongo_path,
-                            'chunks': res_list
+                            'chunks': [i[:2] for i in res_list],
+                            'lyrics_chunks': {
+                                i[3]: i[2]
+                                for i in res_list
+                            },
                         })
                 return result
         except Exception as e:
