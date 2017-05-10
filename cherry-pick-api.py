@@ -1,4 +1,5 @@
 # coding=utf-8
+import difflib
 import json
 from io import BytesIO
 from random import shuffle
@@ -9,6 +10,8 @@ from flask import jsonify, request, send_file
 
 from config import mongo, sphinx, postgres, cropper
 from external import data_getter
+
+from external.mazafaka import d
 
 app = Flask(__name__)
 app.debug = True
@@ -175,6 +178,14 @@ def search():
                 'page',
             ]
         })
+    updated_q =[]
+    for word in query.split(' '):
+        a = difflib.get_close_matches(word, d.keys(), n=1, cutoff=0.6)
+        if len(a) > 0:
+            updated_q.append(d.get(a[0]))
+    if updated_q:
+        query = ' '.join(updated_q)
+    app.logger.info(query)
     postgres.add_query_history(query)
     found_ids = sphinx.find_songs(query)
     if not found_ids:

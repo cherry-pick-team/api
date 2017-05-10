@@ -21,12 +21,11 @@ def get_lengths(ts):
 
     ts.sort(key=lambda x: x[0] - x[1])
     ts = ts[:3]
-    ts.sort(key=lambda x: x[0])
 
     res = []
     for one in ts:
-        if one[1] - one[0] < 4000:
-            res.append([one[0] - 2500, one[1] + 2500, one[2], one[3]])
+        if one[1] - one[0] < 6000:
+            res.append([one[0] - 4000, one[1] + 4000, one[2], one[3]])
         else:
             res.append(one)
     return res
