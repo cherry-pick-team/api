@@ -29,12 +29,6 @@ def get_lengths(ts, relevant_sequence):
         else:
             res.append(one)
 
-    relevant_order = []
-    for order_id in relevant_sequence:
-        for the_one_id in res:
-            if the_one_id[2] == order_id:
-                relevant_order.append(the_one_id)
-                break
     return res
 
 
@@ -210,17 +204,29 @@ class PsgClient(object):
                     ]
                     res_list = get_lengths(ts, ids)
                     if res_list:
-                        result.append({
+                        this_song_dict = {
                             'id': song_id,
                             'album_id': album_id,
                             'mongo_path': mongo_path,
-                            'chunks': [i[:2] for i in res_list],
-                            'lyrics_chunks': [
-                                self.get_closest_lyrics(i[2], song_id)
-                                for i in res_list
-                            ],
-                        })
-                return result
+                        }
+                        for chunk in res_list:
+                            this_song_dict.update({'chunks': chunk[:2]})
+                            this_song_dict.update({
+                                'lyrics_chunks': {
+                                    'start': chunk[0],
+                                    'end': chunk[1],
+                                    'lyrics': [i[0] for i in self.get_closest_lyrics(chunk[2], song_id)]
+                                }
+                            })
+                        result.append(this_song_dict)
+                final = []
+                for i in ids:
+                    for it in result:
+                        if i == it['id']:
+                            final.append(it)
+                            break
+
+                return final
         except Exception as e:
             logger.error('Failed to get songs info')
             logger.error(e)
