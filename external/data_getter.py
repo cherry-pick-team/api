@@ -165,7 +165,7 @@ class PsgClient(object):
 
         self.all_songs = '''
         SELECT
-            DISTINCT s.songid
+            DISTINCT s.id
         FROM songs AS s
         ORDER BY s.author
         LIMIT {} OFFSET {}
