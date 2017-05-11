@@ -166,7 +166,7 @@ class PsgClient(object):
         self.closest_lyrics = '''
         SELECT t.phrase
         FROM transcription AS t
-        WHERE t.songid = '%s' AND t.id=any(%s)
+        WHERE t.songid=%s AND t.id=ANY(%s)
         '''
 
     def get_lyrics_map(self, songid):
@@ -215,10 +215,10 @@ class PsgClient(object):
                             'album_id': album_id,
                             'mongo_path': mongo_path,
                             'chunks': [i[:2] for i in res_list],
-                            'lyrics_chunks': {
+                            'lyrics_chunks': [
                                 self.get_closest_lyrics(i[2], song_id)
                                 for i in res_list
-                            },
+                            ],
                         })
                 return result
         except Exception as e:
@@ -360,7 +360,7 @@ class PsgClient(object):
                 self.db_user, self.db_password, self.db_host, self.db_name))
         cur = self.conn.cursor()
         try:
-            cur.execute(self.closest_lyrics, (song_id, (lyr_id, lyr_id-1, lyr_id+1)))
+            cur.execute(self.closest_lyrics, (song_id, [lyr_id, lyr_id-1, lyr_id+1] ))
             return cur.fetchall()
         except Exception as e:
             logger.error('Failed to get song with id=`{}`'.format(id))
