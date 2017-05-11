@@ -14,7 +14,7 @@ logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.DEBUG)
 
 
-def get_lengths(ts):
+def get_lengths(ts, relevant_sequence):
     for sub_list in ts:
         if sub_list[1] - sub_list[0] > 19000:
             return [sub_list]
@@ -25,9 +25,16 @@ def get_lengths(ts):
     res = []
     for one in ts:
         if one[1] - one[0] < 6000:
-            res.append([one[0] - 4000, one[1] + 4000, one[2], one[3]])
+            res.append([one[0] - 4000, one[1] + 4000, one[2]])
         else:
             res.append(one)
+
+    relevant_order = []
+    for order_id in relevant_sequence:
+        for the_one_id in res:
+            if the_one_id[2] == order_id:
+                relevant_order.append(the_one_id)
+                break
     return res
 
 
@@ -96,7 +103,7 @@ class SphinxSearch(object):
 class PsgClient(object):
     def __init__(self, host, user, password, db_name):
         self.select_unique_songs = '''
-        SELECT t.songid, s.album_id, s.file_id, array_agg(t.start_time_ms), array_agg(t.end_time_ms), array_agg(t.phrase), array_agg(t.id)
+        SELECT t.songid, s.album_id, s.file_id, array_agg(t.start_time_ms), array_agg(t.end_time_ms), array_agg(t.id)
         FROM transcription AS t
         JOIN songs AS s
         ON s.id = t.songid
@@ -156,6 +163,12 @@ class PsgClient(object):
         LIMIT {};
         '''
 
+        self.closest_lyrics = '''
+        SELECT t.phrase
+        FROM transcription AS t
+        WHERE t.songid = '%s' AND t.id=any(%s)
+        '''
+
     def get_lyrics_map(self, songid):
         if self.conn.closed:
             self.conn = psycopg2.connect('postgres://{}:{}@{}:5432/{}'.format(
@@ -193,9 +206,9 @@ class PsgClient(object):
                     mongo_path = id[2]
                     ts = [
                         list(i)
-                        for i in zip(id[3], id[4], id[5], id[6])
+                        for i in zip(id[3], id[4], id[5])
                     ]
-                    res_list = get_lengths(ts)
+                    res_list = get_lengths(ts, ids)
                     if res_list:
                         result.append({
                             'id': song_id,
@@ -203,7 +216,7 @@ class PsgClient(object):
                             'mongo_path': mongo_path,
                             'chunks': [i[:2] for i in res_list],
                             'lyrics_chunks': {
-                                i[3]: i[2]
+                                self.get_closest_lyrics(i[2], song_id)
                                 for i in res_list
                             },
                         })
@@ -341,6 +354,20 @@ class PsgClient(object):
         finally:
             cur.close()
 
+    def get_closest_lyrics(self, lyr_id, song_id):
+        if self.conn.closed:
+            self.conn = psycopg2.connect('postgres://{}:{}@{}:5432/{}'.format(
+                self.db_user, self.db_password, self.db_host, self.db_name))
+        cur = self.conn.cursor()
+        try:
+            cur.execute(self.closest_lyrics, (song_id, (lyr_id, lyr_id-1, lyr_id+1)))
+            return cur.fetchall()
+        except Exception as e:
+            logger.error('Failed to get song with id=`{}`'.format(id))
+            logger.error(e)
+            return {}
+        finally:
+            cur.close()
 
 class CropperDemon(object):
     def __init__(self, host, port):

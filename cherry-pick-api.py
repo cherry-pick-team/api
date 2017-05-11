@@ -185,6 +185,7 @@ def search():
             updated_q.append(d.get(a[0]))
     if updated_q:
         query = ' '.join(updated_q)
+
     app.logger.info(query)
     postgres.add_query_history(query)
     found_ids = sphinx.find_songs(query)
