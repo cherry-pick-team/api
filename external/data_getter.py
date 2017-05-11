@@ -207,29 +207,19 @@ class PsgClient(object):
                         lir_dicts_list = []
                         for chunk in res_list:
                             lir_dicts_list.append({
-                                'lyrics_chunks': {
                                     'start': chunk[0],
                                     'end': chunk[1],
                                     'lyrics': [i[0] for i in self.get_closest_lyrics(chunk[2], song_id)]
-                                }
-                            })
-                        this_song_dict = {
+                                })
+                        result.append({
                             'id': song_id,
                             'album_id': album_id,
                             'mongo_path': mongo_path,
                             'chunks': [i[:2] for i in res_list],
-                            'lyrics': lir_dicts_list
-                        }
+                            'lyrics_chunks': lir_dicts_list
+                        })
 
-                        result.append(this_song_dict)
-                final = []
-                for i in ids:
-                    for it in result:
-                        if i == it['id']:
-                            final.append(it)
-                            break
-
-                return final
+                return result
         except Exception as e:
             logger.error('Failed to get songs info')
             logger.error(e)
