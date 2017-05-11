@@ -204,20 +204,23 @@ class PsgClient(object):
                     ]
                     res_list = get_lengths(ts, ids)
                     if res_list:
-                        this_song_dict = {
-                            'id': song_id,
-                            'album_id': album_id,
-                            'mongo_path': mongo_path,
-                        }
+                        lir_dicts_list = []
                         for chunk in res_list:
-                            this_song_dict.update({'chunks': chunk[:2]})
-                            this_song_dict.update({
+                            lir_dicts_list.append({
                                 'lyrics_chunks': {
                                     'start': chunk[0],
                                     'end': chunk[1],
                                     'lyrics': [i[0] for i in self.get_closest_lyrics(chunk[2], song_id)]
                                 }
                             })
+                        this_song_dict = {
+                            'id': song_id,
+                            'album_id': album_id,
+                            'mongo_path': mongo_path,
+                            'chunks': [i[:2] for i in res_list],
+                            'lyrics': lir_dicts_list
+                        }
+
                         result.append(this_song_dict)
                 final = []
                 for i in ids:
