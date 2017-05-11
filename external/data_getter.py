@@ -165,9 +165,10 @@ class PsgClient(object):
 
         self.all_songs = '''
         SELECT
-            sh.songid
-        FROM song_history AS sh
-        WHERE sh.id > {} AND sh.id <= {}
+            DISTINCT s.songid
+        FROM songs AS s
+        ORDER BY s.author
+        LIMIT {} OFFSET {}
         '''
 
     def get_lyrics_map(self, songid):
@@ -339,13 +340,13 @@ class PsgClient(object):
         finally:
             cur.close()
 
-    def get_all_songs(self, left, right_inc):
+    def get_all_songs(self, offset, limit):
         if self.conn.closed:
             self.conn = psycopg2.connect('postgres://{}:{}@{}:5432/{}'.format(
                 self.db_user, self.db_password, self.db_host, self.db_name))
         cur = self.conn.cursor()
         try:
-            cur.execute(self.all_songs.format(left, right_inc))
+            cur.execute(self.all_songs.format(limit, offset))
             rows = cur.fetchall()
             if rows:
                 result = []

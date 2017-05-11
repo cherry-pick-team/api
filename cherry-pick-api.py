@@ -249,7 +249,7 @@ def song_popular():
 
 @app.route('/api/v2/song/all', methods=['GET'])
 def song_all():
-    limit = get_arg('limit', str(10))
+    limit = get_arg('limit', str(20))
     page = get_arg('page', str(1))
 
     try:
@@ -263,8 +263,8 @@ def song_all():
                 'limit',
             ]
         })
-    right = limit*page
-    result = postgres.get_all_songs(right - limit, right)
+    offset = limit * (page - 1)
+    result = postgres.get_all_songs(offset, limit)
     result = list(map(song_full_pack_info, result))
 
     return json_response(result)
