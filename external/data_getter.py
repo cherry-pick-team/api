@@ -163,6 +163,13 @@ class PsgClient(object):
         WHERE t.songid=%s AND t.id=ANY(%s)
         '''
 
+        self.all_songs = '''
+        SELECT
+            sh.songid
+        FROM song_history AS sh
+        WHERE sh.id > {} AND sh.id <= {}
+        '''
+
     def get_lyrics_map(self, songid):
         if self.conn.closed:
             self.conn = psycopg2.connect('postgres://{}:{}@{}:5432/{}'.format(
@@ -322,6 +329,29 @@ class PsgClient(object):
                     query = row[0]
                     count = row[1]
                     result.append({'id': query, 'count': count})
+                return result
+            else:
+                return []
+        except Exception as e:
+            logger.error('Failed to get popular songs')
+            logger.error(e)
+            return []
+        finally:
+            cur.close()
+
+    def get_all_songs(self, left, right_inc):
+        if self.conn.closed:
+            self.conn = psycopg2.connect('postgres://{}:{}@{}:5432/{}'.format(
+                self.db_user, self.db_password, self.db_host, self.db_name))
+        cur = self.conn.cursor()
+        try:
+            cur.execute(self.all_songs.format(left, right_inc))
+            rows = cur.fetchall()
+            if rows:
+                result = []
+                for row in rows:
+                    query = row[0]
+                    result.append({'id': query})
                 return result
             else:
                 return []

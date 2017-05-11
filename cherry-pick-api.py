@@ -247,6 +247,29 @@ def song_popular():
     return json_response(result)
 
 
+@app.route('/api/v2/song/all', methods=['GET'])
+def song_all():
+    limit = get_arg('limit', str(10))
+    page = get_arg('page', str(1))
+
+    try:
+        limit = int(limit)
+        page = int(page)
+    except ValueError:
+        return jsonify({
+            'code': '400',
+            'message': 'wrong format',
+            'fields': [
+                'limit',
+            ]
+        })
+    right = limit*page
+    result = postgres.get_all_songs(right - limit, right)
+    result = list(map(song_full_pack_info, result))
+
+    return json_response(result)
+
+
 @app.route('/api/v2/song/<song_id>/info', methods=['GET'])
 def song_id_info(song_id):
     try:
