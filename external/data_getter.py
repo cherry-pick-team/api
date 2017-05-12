@@ -217,7 +217,10 @@ class PsgClient(object):
                             lir_dicts_list.append({
                                     'start': chunk[0],
                                     'end': chunk[1],
-                                    'lyrics': [i[0] for i in self.get_closest_lyrics(chunk[2], song_id)]
+                                    'lyrics': [
+                                        i[0]
+                                        for i in self.get_closest_lyrics(chunk[2], song_id)
+                                        if i[0] and i[0] != "" and "chorus" not in i[0].lower()]
                                 })
                         result.append({
                             'id': song_id,
