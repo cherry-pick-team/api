@@ -183,7 +183,8 @@ class PsgClient(object):
                 result = collections.OrderedDict()
                 for phrase in phrase_and_timestamps:
                     if len(phrase) > 1:
-                        result[phrase[0]] = phrase[1]
+                        if phrase[1] and phrase[1] != "" and "chorus" not in phrase[1].lower():
+                            result[phrase[0]] = phrase[1]
                 return result
         except Exception as e:
             logger.error('Failed to get songs info')
