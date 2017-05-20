@@ -125,7 +125,7 @@ def song_full_pack_info(incoming_info):
         'album': {
             'id': song_basic_info['album_id'],
             'name': album_basic_info['title'],
-            'cover_url': 'http://cherry.nksoff.ru/api/v2/cover?path=' + album_basic_info['cover_id'],
+            'cover_url': 'https://zsong.ru/api/v2/cover?path=' + album_basic_info['cover_id'],
             'year': album_basic_info['year']
         }
     })
@@ -138,7 +138,7 @@ def song_full_pack_info(incoming_info):
         song_basic_info['album'] = {
                 'id': 0,
                 'name': '',
-                'cover_url': 'http://cherry.nksoff.ru/static/no_cover_' + str(cover_num) + '.png'
+                'cover_url': 'https://zsong.ru/static/no_cover_' + str(cover_num) + '.png'
         }
     return song_basic_info
 
@@ -159,7 +159,7 @@ def song_full_pack_info(incoming_info):
 #         all_info['album'] = {
 #                 'id': 0,
 #                 'name': '',
-#                 'cover_url': 'http://cherry.nksoff.ru/static/no_cover_' + str(cover_num) + '.png'
+#                 'cover_url': 'https://zsong.ru/static/no_cover_' + str(cover_num) + '.png'
 #         }
 #
 #     return all_info
