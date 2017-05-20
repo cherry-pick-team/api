@@ -1,20 +1,30 @@
 # coding=utf-8
 import difflib
 import json
+import os
 from io import BytesIO
+import tempfile
 from random import shuffle
 
 from flask import Flask
 from flask import Response
-from flask import jsonify, request, send_file
+from flask import after_this_request, jsonify, request, send_file, url_for
+from werkzeug.utils import secure_filename
 
 from config import mongo, sphinx, postgres, cropper
 from external import data_getter
+from external import utils
 
 from external.mazafaka import d
 
+UPLOAD_FOLDER = '/tmp/uploads'
+NOT_FLAC_EXTENSIONS = {'mp3', 'aac', 'm4a'}
+FLAC_EXTENSIONS = {'wav', 'flac'}
+ALLOWED_EXTENSIONS = NOT_FLAC_EXTENSIONS | FLAC_EXTENSIONS
+
 app = Flask(__name__)
 app.debug = True
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
 def json_response(obj_or_array):
@@ -51,6 +61,46 @@ def not_found(error):
         'fields': [
         ]
     })
+
+
+@app.route('/api/v2/search/voice', methods=['GET', 'POST'])
+def voice_search():
+    if 'voice' not in request.files:
+        return jsonify({
+            'code': '400',
+            'message': 'voice file missing'
+        })
+    file = request.files['voice']
+    file_extension = utils.get_file_extension(app.logger, file.filename)
+    if file_extension not in ALLOWED_EXTENSIONS:
+        return jsonify({
+            'code': '400',
+            'message': 'wrong format for audio file expected {} got {}'.format(NOT_FLAC_EXTENSIONS, file.filename)
+        })
+    source_file_path = tempfile.NamedTemporaryFile(delete=False, suffix='-user-uploaded').name
+    file.save(source_file_path)
+    result_file_path = tempfile.NamedTemporaryFile(delete=False, suffix='.wav').name
+    if file_extension in NOT_FLAC_EXTENSIONS:
+        if not utils.convert_to_wav(app.logger, source_file_path, result_file_path):
+            return jsonify({
+                'code': '500',
+                'message': 'failed to encode from {} to .wav format'.format(file_extension)
+            })
+    else:
+        result_file_path = source_file_path
+    result = utils.retrieve_phrase(app.logger, result_file_path)
+
+    @after_this_request
+    def remove_file(response):
+        try:
+            os.remove(source_file_path)
+            if source_file_path != result_file_path:
+                os.remove(result_file_path)
+        except Exception as error:
+            app.logger.error("Error removing or closing downloaded file handle")
+            app.logger.error(error)
+        return response
+    return json_response(result)
 
 
 def song_full_pack_info(incoming_info):
