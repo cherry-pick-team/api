@@ -10,13 +10,12 @@ class SphinxSearch(object):
         self.connection = pymysql.connect(
             host=self.host, port=self.port, user=self.user, passwd=self.password, charset='utf8', db='')
 
-    def reconnect(self, func):
+    def reconnect(func):
         def deco(self, *args):
             if not self.connection.open:
                 self.connection = pymysql.connect(
                     host=self.host, port=self.port, user=self.user, passwd=self.password, charset='utf8', db='')
             return func(self, *args)
-
         return deco
 
     def connect(self):
