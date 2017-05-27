@@ -120,6 +120,7 @@ class PsgClient(object):
         finally:
             cur.close()
 
+    @reconnect
     def get_relevant_rotation(self, relevant_ids_seq, arr_to_rearrange):
         cur = self.conn.cursor()
         try:
@@ -127,13 +128,13 @@ class PsgClient(object):
             songs_seq = []
             for id in relevant_ids_seq:
                 cur.execute(self.sond_id_from_transcription, (id,))
-                current_id = cur.fetchone()
+                current_id = cur.fetchone()[0]
                 if current_id not in songs_seq:
                     songs_seq.append(current_id)
                     for element in arr_to_rearrange:
-                        if element['id'] == current_id:
+                        if str(element['id']) == str(current_id):
                             result_array.append(element)
-            return result_array
+            return result_array if len(result_array) == len(arr_to_rearrange) else arr_to_rearrange
         except Exception as e:
             self.logger.error('Failed to get songs info')
             self.logger.error(e)
