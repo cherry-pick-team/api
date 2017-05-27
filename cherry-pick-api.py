@@ -223,6 +223,7 @@ def search():
             ]
         })
     found_coordinates = postgres.get_all_song_ids_and_timestamps(found_ids)
+    found_coordinates = postgres.get_relevant_rotation(found_ids, found_coordinates)
     found_coordinates = list(map(song_full_pack_info, found_coordinates))
 
     for song in found_coordinates:

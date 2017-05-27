@@ -76,6 +76,14 @@ class PsgClient(object):
         ORDER BY SUBSTR(s.title, 2)
         LIMIT {} OFFSET {}
         '''
+
+        self.sond_id_from_transcription = '''
+        SELECT
+            t.songid
+        FROM transcription AS t
+        WHERE t.id=%s
+        '''
+
         self.logger = logger
         self.db_name = db_name
         self.db_host = host
@@ -111,6 +119,29 @@ class PsgClient(object):
             return {}
         finally:
             cur.close()
+
+    def get_relevant_rotation(self, relevant_ids_seq, arr_to_rearrange):
+        cur = self.conn.cursor()
+        try:
+            result_array = []
+            songs_seq = []
+            for id in relevant_ids_seq:
+                cur.execute(self.sond_id_from_transcription, (id,))
+                current_id = cur.fetchone()
+                if current_id not in songs_seq:
+                    songs_seq.append(current_id)
+                    for element in arr_to_rearrange:
+                        if element['id'] == current_id:
+                            result_array.append(element)
+            return result_array
+        except Exception as e:
+            self.logger.error('Failed to get songs info')
+            self.logger.error(e)
+            return arr_to_rearrange
+        finally:
+            if cur:
+                cur.close()
+
 
     @reconnect
     def get_all_song_ids_and_timestamps(self, ids):
@@ -154,7 +185,8 @@ class PsgClient(object):
             self.logger.error(e)
             return []
         finally:
-            cur.close()
+            if cur:
+                cur.close()
 
     @reconnect
     def get_song_info_by_id(self, id):
