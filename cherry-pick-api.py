@@ -1,21 +1,18 @@
 # coding=utf-8
 import difflib
-import json
+import io
 import os
-from io import BytesIO
 import tempfile
-from random import shuffle
+import json
 
 from flask import Flask
 from flask import Response
-from flask import after_this_request, jsonify, request, send_file, url_for
-from werkzeug.utils import secure_filename
+from flask import after_this_request, jsonify, request, send_file
 
 from config import mongo, sphinx, postgres, cropper
-from external import data_getter
 from external import utils
-
 from external.mazafaka import d
+
 
 UPLOAD_FOLDER = '/tmp/uploads'
 NOT_FLAC_EXTENSIONS = {'mp3', 'aac', 'm4a'}
@@ -100,6 +97,7 @@ def voice_search():
             app.logger.error("Error removing or closing downloaded file handle")
             app.logger.error(error)
         return response
+
     return json_response(result)
 
 
@@ -136,33 +134,11 @@ def song_full_pack_info(incoming_info):
     if song_basic_info.get('album') is None:
         cover_num = (int(song_basic_info.get('id')) % 6) + 1
         song_basic_info['album'] = {
-                'id': 0,
-                'name': '',
-                'cover_url': 'https://zsong.ru/static/no_cover_' + str(cover_num) + '.png'
+            'id': 0,
+            'name': '',
+            'cover_url': 'https://zsong.ru/static/no_cover_' + str(cover_num) + '.png'
         }
     return song_basic_info
-
-#
-# def add_more_info_about_song(info):
-#     more_info = postgres.get_song_info_by_id(info['id'])
-#     info_map = postgres.get_info(info['id'])
-#     lyrics_map = postgres.get_lyrics_map(info['id'])
-#     if lyrics_map:
-#         info_map['timestamp_lyrics'] = lyrics_map
-#
-#     all_info = info_map.copy()
-#     all_info.update(more_info)
-#     all_info.update(info)
-#
-#     if all_info.get('album') is None:
-#         cover_num = (int(all_info.get('id')) % 6) + 1
-#         all_info['album'] = {
-#                 'id': 0,
-#                 'name': '',
-#                 'cover_url': 'https://zsong.ru/static/no_cover_' + str(cover_num) + '.png'
-#         }
-#
-#     return all_info
 
 
 @app.route('/api/v2/cover', methods=['GET'])
@@ -176,9 +152,9 @@ def cover():
                 'path',
             ]
         })
-    buffer = BytesIO()
-    cover = mongo.get_cover(path)
-    if not cover:
+    buffer = io.BytesIO()
+    cover_file = mongo.get_cover(path)
+    if not cover_file:
         return jsonify({
             'code': '404',
             'message': 'Found nothing',
@@ -186,10 +162,9 @@ def cover():
                 'id',
             ]
         })
-    buffer.write(cover)
+    buffer.write(cover_file)
     buffer.seek(0)
-
-    return send_file(buffer,attachment_filename='cover.jpg', mimetype='image/jpg')
+    return send_file(buffer, attachment_filename='cover.jpg', mimetype='image/jpg')
 
 
 @app.route('/api/v2/search', methods=['GET'])
@@ -228,7 +203,7 @@ def search():
                 'page',
             ]
         })
-    updated_q =[]
+    updated_q = []
     for word in query.split(' '):
         a = difflib.get_close_matches(word, d.keys(), n=1, cutoff=0.6)
         if len(a) > 0:
@@ -336,12 +311,12 @@ def song_id_info(song_id):
     info = postgres.get_song_info_by_id(song_id)
     if not info:
         return jsonify({
-                'code': '404',
-                'message': 'song not found',
-                'fields': [
-                    'id',
-                ]
-            })
+            'code': '404',
+            'message': 'song not found',
+            'fields': [
+                'id',
+            ]
+        })
     return song_full_pack_info({'id': song_id})
 
 
@@ -351,14 +326,12 @@ def song_id_stream(song_id, from_ms, to_ms):
         song_id = int(song_id)
     except ValueError:
         return ''
-
     info = postgres.get_song_info_by_id(song_id)
     if not info:
         return ''
-
     res = cropper.get_song(info['mongo_id'], [[int(from_ms), int(to_ms)]])
-
     return Response(res.text, mimetype='audio/mpeg')
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')

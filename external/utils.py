@@ -20,6 +20,7 @@ def convert_to_wav(logger, source_file_path, result_file_path):
     :param result_file_path:
     :return: boolean whether successful
     """
+    process = ''
     try:
         process = Popen(['ffmpeg', '-y', '-i', source_file_path, '-f', 'wav', result_file_path])
         outs, errs = process.communicate(timeout=5)
@@ -28,7 +29,8 @@ def convert_to_wav(logger, source_file_path, result_file_path):
             return True
     except (TimeoutExpired, Exception) as e:
         if e is TimeoutExpired:
-            process.kill()
+            if process:
+                process.kill()
             outs, errs = process.communicate()
             logger.error('Failed to convert .aac file. Reason')
             logger.error(errs)
