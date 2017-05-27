@@ -8,7 +8,8 @@ RUN sh -c 'echo "deb http://www.deb-multimedia.org jessie main" > /etc/apt/sourc
      && apt-get install -y --force-yes deb-multimedia-keyring \
      && apt-get install -y --force-yes ffmpeg swig libpulse-dev
 
-RUN git clone https://github.com/cherry-pick-team/api.git
+ADD https://api.github.com/repos/cherry-pick-team/api/git/refs/heads/master version.json
+RUN git clone -b master https://github.com/cherry-pick-team/api.git
 
 WORKDIR api
 ENV PYTHONPATH=/usr/src/app/api
