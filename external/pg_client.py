@@ -97,255 +97,174 @@ class PsgClient(object):
             if self.conn.closed:
                 self.conn = psycopg2.connect('postgres://{}:{}@{}:5432/{}'.format(
                     self.db_user, self.db_password, self.db_host, self.db_name))
-            return func(self, *args, **kwargs)
+            cur = self.conn.cursor()
+            try:
+                return func(self, cur, *args, **kwargs)
+            except Exception as e:
+                if not self.conn.closed:
+                    self.conn.rollback()
+                self.logger.error('Failed to get songs info')
+                self.logger.error(e)
+                return {}
+            finally:
+                if cur:
+                    cur.close()
         return deco
 
     @reconnect
-    def get_lyrics_map(self, songid):
-        cur = self.conn.cursor()
-        try:
-            cur.execute(self.get_ordered_lyrics_map, (songid,))
-            phrase_and_timestamps = cur.fetchall()
-            if phrase_and_timestamps:
-                result = collections.OrderedDict()
-                for phrase in phrase_and_timestamps:
-                    if len(phrase) > 1:
-                        if phrase[1] and phrase[1] != "" and "chorus" not in phrase[1].lower():
-                            result[phrase[0]] = phrase[1]
-                return result
-        except Exception as e:
-            self.logger.error('Failed to get songs info')
-            self.logger.error(e)
-            return {}
-        finally:
-            cur.close()
-
-    @reconnect
-    def get_relevant_rotation(self, relevant_ids_seq, arr_to_rearrange):
-        cur = self.conn.cursor()
-        try:
-            result_array = []
-            songs_seq = []
-            for id in relevant_ids_seq:
-                cur.execute(self.sond_id_from_transcription, (id,))
-                current_id = cur.fetchone()[0]
-                if current_id not in songs_seq:
-                    songs_seq.append(current_id)
-                    for element in arr_to_rearrange:
-                        if str(element['id']) == str(current_id):
-                            result_array.append(element)
-            return result_array if len(result_array) == len(arr_to_rearrange) else arr_to_rearrange
-        except Exception as e:
-            self.logger.error('Failed to get songs info')
-            self.logger.error(e)
-            return arr_to_rearrange
-        finally:
-            if cur:
-                cur.close()
+    def get_lyrics_map(self, cur, songid):
+        cur.execute(self.get_ordered_lyrics_map, (songid,))
+        phrase_and_timestamps = cur.fetchall()
+        if phrase_and_timestamps:
+            result = collections.OrderedDict()
+            for phrase in phrase_and_timestamps:
+                if len(phrase) > 1:
+                    if phrase[1] and phrase[1] != "" and "chorus" not in phrase[1].lower():
+                        result[phrase[0]] = phrase[1]
+            return result
 
 
     @reconnect
-    def get_all_song_ids_and_timestamps(self, ids):
-        cur = self.conn.cursor()
-        try:
-            cur.execute(self.select_unique_songs, (ids,))
-            ids_plus_chunks = cur.fetchall()
-            if ids_plus_chunks:
-                result = []
-                for id in ids_plus_chunks:
-                    song_id = id[0]
-                    album_id = id[1]
-                    mongo_path = id[2]
-                    ts = [
-                        list(i)
-                        for i in zip(id[3], id[4], id[5])
-                        ]
-                    res_list = get_lengths(ts)
-                    if res_list:
-                        lir_dicts_list = []
-                        for chunk in res_list:
-                            lir_dicts_list.append({
-                                'start': chunk[0],
-                                'end': chunk[1],
-                                'lyrics': [
-                                    i[0]
-                                    for i in self.get_closest_lyrics(chunk[2], song_id)
-                                    if i[0] and i[0] != "" and "chorus" not in i[0].lower()]
-                            })
-                        result.append({
-                            'id': song_id,
-                            'album_id': album_id,
-                            'mongo_path': mongo_path,
-                            'chunks': [i[:2] for i in res_list],
-                            'lyrics_chunks': lir_dicts_list
+    def get_relevant_rotation(self, cur, relevant_ids_seq, arr_to_rearrange):
+        result_array = []
+        songs_seq = []
+        for id in relevant_ids_seq:
+            cur.execute(self.sond_id_from_transcription, (id,))
+            current_id = cur.fetchone()[0]
+            if current_id not in songs_seq:
+                songs_seq.append(current_id)
+                for element in arr_to_rearrange:
+                    if str(element['id']) == str(current_id):
+                        result_array.append(element)
+        return result_array if len(result_array) == len(arr_to_rearrange) else arr_to_rearrange
+
+
+    @reconnect
+    def get_all_song_ids_and_timestamps(self, cur, ids):
+        cur.execute(self.select_unique_songs, (ids,))
+        ids_plus_chunks = cur.fetchall()
+        if ids_plus_chunks:
+            result = []
+            for id in ids_plus_chunks:
+                song_id = id[0]
+                album_id = id[1]
+                mongo_path = id[2]
+                ts = [
+                    list(i)
+                    for i in zip(id[3], id[4], id[5])
+                    ]
+                res_list = get_lengths(ts)
+                if res_list:
+                    lir_dicts_list = []
+                    for chunk in res_list:
+                        lir_dicts_list.append({
+                            'start': chunk[0],
+                            'end': chunk[1],
+                            'lyrics': [
+                                i[0]
+                                for i in self.get_closest_lyrics(chunk[2], song_id)
+                                if i[0] and i[0] != "" and "chorus" not in i[0].lower()]
                         })
+                    result.append({
+                        'id': song_id,
+                        'album_id': album_id,
+                        'mongo_path': mongo_path,
+                        'chunks': [i[:2] for i in res_list],
+                        'lyrics_chunks': lir_dicts_list
+                    })
 
-                return result
-        except Exception as e:
-            self.logger.error('Failed to get songs info')
-            self.logger.error(e)
-            return []
-        finally:
-            if cur:
-                cur.close()
+            return result
 
-    @reconnect
-    def get_song_info_by_id(self, id):
-        cur = self.conn.cursor()
-        try:
-            cur.execute(self.select_song, (id,))
-            value = cur.fetchone()
-            if value and len(value) > 4:
-                return {
-                    'author': value[0],
-                    'title': value[1],
-                    'lyrics': value[2],
-                    'mongo_id': value[3],
-                    'album_id': value[4]
-                }
-        except Exception as e:
-            self.logger.error('Failed to get song with id=`{}`'.format(id))
-            self.logger.error(e)
-            return {}
-        finally:
-            if cur:
-                cur.close()
 
     @reconnect
-    def add_query_history(self, query):
-        cur = self.conn.cursor()
-        try:
-            cur.execute(self.add_to_query_history, (query,))
-            self.conn.commit()
-        except Exception as e:
-            if not self.conn.closed:
-                self.conn.rollback()
-            self.logger.error('Failed to add query to history: `{}`'.format(query))
-            self.logger.error(e)
-            return {}
-        finally:
-            if cur:
-                cur.close()
+    def get_song_info_by_id(self, cur, id):
+        cur.execute(self.select_song, (id,))
+        value = cur.fetchone()
+        if value and len(value) > 4:
+            return {
+                'author': value[0],
+                'title': value[1],
+                'lyrics': value[2],
+                'mongo_id': value[3],
+                'album_id': value[4]
+            }
+
 
     @reconnect
-    def add_song_history(self, _id):
+    def add_query_history(self, cur, query):
+        cur.execute(self.add_to_query_history, (query,))
+        self.conn.commit()
+
+
+    @reconnect
+    def add_song_history(self, cur, _id):
         if not _id:
             return
-        cur = self.conn.cursor()
-        try:
-            self.logger.info('Add song to history: `{}`'.format(_id))
-            cur.execute(self.add_to_song_history, (_id,))
-            self.conn.commit()
-        except Exception as e:
-            if not self.conn.closed:
-                self.conn.rollback()
-            self.logger.error('Failed to add song to history: `{}`'.format(_id))
-            self.logger.error(e)
-        finally:
-            if cur:
-                cur.close()
+        self.logger.info('Add song to history: `{}`'.format(_id))
+        cur.execute(self.add_to_song_history, (_id,))
+        self.conn.commit()
+
 
     @reconnect
-    def get_popular_queries(self, limit=10):
-        cur = self.conn.cursor()
-        try:
-            cur.execute(self.popular_queries.format(limit))
-            rows = cur.fetchall()
-            if rows:
-                result = []
-                for row in rows:
-                    query = row[0]
-                    count = row[1]
-                    result.append({'query': query, 'count': count})
-                return result
-            else:
-                return []
-        except Exception as e:
-            self.logger.error('Failed to get popular queries')
-            self.logger.error(e)
+    def get_popular_queries(self, cur, limit=10):
+        cur.execute(self.popular_queries.format(limit))
+        rows = cur.fetchall()
+        if rows:
+            result = []
+            for row in rows:
+                query = row[0]
+                count = row[1]
+                result.append({'query': query, 'count': count})
+            return result
+        else:
             return []
-        finally:
-            if cur:
-                cur.close()
+
 
     @reconnect
-    def get_popular_songs(self, limit=10):
-        cur = self.conn.cursor()
-        try:
-            cur.execute(self.popular_song_ids.format(limit))
-            rows = cur.fetchall()
-            if rows:
-                result = []
-                for row in rows:
-                    query = row[0]
-                    count = row[1]
-                    result.append({'id': query, 'count': count})
-                return result
-            else:
-                return []
-        except Exception as e:
-            self.logger.error('Failed to get popular songs')
-            self.logger.error(e)
+    def get_popular_songs(self, cur, limit=10):
+        cur.execute(self.popular_song_ids.format(limit))
+        rows = cur.fetchall()
+        if rows:
+            result = []
+            for row in rows:
+                query = row[0]
+                count = row[1]
+                result.append({'id': query, 'count': count})
+            return result
+        else:
             return []
-        finally:
-            if cur:
-                cur.close()
+
 
     @reconnect
-    def get_all_songs(self, offset, limit):
-        cur = self.conn.cursor()
-        try:
-            cur.execute(self.all_songs.format(limit, offset))
-            rows = cur.fetchall()
-            if rows:
-                result = []
-                for row in rows:
-                    query = row[0]
-                    result.append({'id': query})
-                return result
-            else:
-                return []
-        except Exception as e:
-            self.logger.error('Failed to get popular songs')
-            self.logger.error(e)
+    def get_all_songs(self, cur, offset, limit):
+        cur.execute(self.all_songs.format(limit, offset))
+        rows = cur.fetchall()
+        if rows:
+            result = []
+            for row in rows:
+                query = row[0]
+                result.append({'id': query})
+            return result
+        else:
             return []
-        finally:
-            if cur:
-                cur.close()
+
 
     @reconnect
-    def get_album_info(self, id):
-        cur = self.conn.cursor()
-        try:
-            cur.execute(self.select_album, (id,))
-            value = cur.fetchone()
-            if value and len(value) > 2:
-                return {
-                    'title': value[0],
-                    'cover_id': value[1],
-                    'year': value[2]
-                }
-        except Exception as e:
-            self.logger.error('Failed to get popular songs')
-            self.logger.error(e)
-            return []
-        finally:
-            if cur:
-                cur.close()
+    def get_album_info(self, cur, id):
+        cur.execute(self.select_album, (id,))
+        value = cur.fetchone()
+        if value and len(value) > 2:
+            return {
+                'title': value[0],
+                'cover_id': value[1],
+                'year': value[2]
+            }
+
 
     @reconnect
-    def get_closest_lyrics(self, lyr_id, song_id):
-        cur = self.conn.cursor()
-        try:
-            cur.execute(self.closest_lyrics, (song_id, [lyr_id, lyr_id - 1, lyr_id + 1]))
-            return cur.fetchall()
-        except Exception as e:
-            self.logger.error('Failed to get song with id=`{}`'.format(id))
-            self.logger.error(e)
-            return {}
-        finally:
-            if cur:
-                cur.close()
+    def get_closest_lyrics(self, cur, lyr_id, song_id):
+        cur.execute(self.closest_lyrics, (song_id, [lyr_id, lyr_id - 1, lyr_id + 1]))
+        return cur.fetchall()
 
 
 def get_lengths(ts):
