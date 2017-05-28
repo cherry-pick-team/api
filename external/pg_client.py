@@ -58,6 +58,7 @@ class PsgClient(object):
         SELECT
             sh.songid, COUNT(*)
         FROM song_history AS sh
+        INNER JOIN songs AS s ON s.id = sh.songid
         GROUP BY sh.songid
         ORDER BY COUNT(*) DESC
         LIMIT {};
