@@ -35,6 +35,7 @@ def get_arg(key, default=None):
         return request.args.get(key, default)
 
 
+# TODO: cache me
 def get_user():
     api_token = request.args.get('api_token')
 
@@ -150,6 +151,10 @@ def song_full_pack_info(incoming_info):
             'name': '',
             'cover_url': 'https://zsong.ru/static/no_cover_' + str(cover_num) + '.png'
         }
+
+    has_like = postgres.get_has_like_song(get_user(), incoming_info['id'])
+    song_basic_info['like'] = has_like
+    
     return song_basic_info
 
 

@@ -111,6 +111,14 @@ class PsgClient(object):
         DELETE FROM song_likes WHERE song_id=%s AND user_id=%s
         '''
 
+        self.get_user_has_song_like_query = '''
+        SELECT
+            sl.song_id
+        FROM song_likes AS sl
+        WHERE sl.song_id=%s
+        AND sl.user_id=%s
+        '''
+
         self.logger = logger
         self.db_name = db_name
         self.db_host = host
@@ -335,6 +343,16 @@ class PsgClient(object):
             return True
         except:
             return False
+
+    @reconnect
+    def get_has_like_song(self, cur, user, song_id):
+        if user is None or user.get('id') is None:
+            return False
+
+        cur.execute(self.get_user_has_song_like_query, (song_id, user.get('id')))
+        row = cur.fetchone()
+
+        return row is not None
 
 
 def get_lengths(ts):
