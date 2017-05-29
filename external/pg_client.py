@@ -95,10 +95,10 @@ class PsgClient(object):
 
         self.get_user_likes_songs_query = '''
         SELECT
-            sl.song_id, sl.date_created
+            sl.song_id, sl.created_at
         FROM song_likes AS sl
         WHERE user_id=%s
-        ORDER BY created_at ASC
+        ORDER BY created_at DESC
         LIMIT {} OFFSET {}
         '''
 

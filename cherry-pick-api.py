@@ -372,7 +372,7 @@ def get_my_likes_songs():
 @app.route('/api/v2/song/<song_id>/like', methods=['POST'])
 def like_song(song_id):
     try:
-        is_like = bool(get_arg('up', 1))
+        is_like = int(get_arg('up', 1)) == 1
     except ValueError:
         return jsonify({
             'code': '400',
