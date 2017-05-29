@@ -85,6 +85,14 @@ class PsgClient(object):
         WHERE t.id=%s
         '''
 
+        self.get_user_by_token_query = '''
+        SELECT
+            u.id
+        FROM users AS u
+        INNER JOIN user_tokens AS ut ON ut.user_id = u.id
+        WHERE ut.token=%s
+        '''
+
         self.logger = logger
         self.db_name = db_name
         self.db_host = host
@@ -110,6 +118,7 @@ class PsgClient(object):
             finally:
                 if cur:
                     cur.close()
+
         return deco
 
     @reconnect
@@ -124,7 +133,6 @@ class PsgClient(object):
                         result[phrase[0]] = phrase[1]
             return result
 
-
     @reconnect
     def get_relevant_rotation(self, cur, relevant_ids_seq, arr_to_rearrange):
         result_array = []
@@ -138,7 +146,6 @@ class PsgClient(object):
                     if str(element['id']) == str(current_id):
                         result_array.append(element)
         return result_array if len(result_array) == len(arr_to_rearrange) else arr_to_rearrange
-
 
     @reconnect
     def get_all_song_ids_and_timestamps(self, cur, ids):
@@ -176,7 +183,6 @@ class PsgClient(object):
 
             return result
 
-
     @reconnect
     def get_song_info_by_id(self, cur, id):
         cur.execute(self.select_song, (id,))
@@ -190,12 +196,10 @@ class PsgClient(object):
                 'album_id': value[4]
             }
 
-
     @reconnect
     def add_query_history(self, cur, query):
         cur.execute(self.add_to_query_history, (query,))
         self.conn.commit()
-
 
     @reconnect
     def add_song_history(self, cur, _id):
@@ -204,7 +208,6 @@ class PsgClient(object):
         self.logger.info('Add song to history: `{}`'.format(_id))
         cur.execute(self.add_to_song_history, (_id,))
         self.conn.commit()
-
 
     @reconnect
     def get_popular_queries(self, cur, limit=10):
@@ -220,7 +223,6 @@ class PsgClient(object):
         else:
             return []
 
-
     @reconnect
     def get_popular_songs(self, cur, limit=10):
         cur.execute(self.popular_song_ids.format(limit))
@@ -235,7 +237,6 @@ class PsgClient(object):
         else:
             return []
 
-
     @reconnect
     def get_all_songs(self, cur, offset, limit):
         cur.execute(self.all_songs.format(limit, offset))
@@ -249,7 +250,6 @@ class PsgClient(object):
         else:
             return []
 
-
     @reconnect
     def get_album_info(self, cur, id):
         cur.execute(self.select_album, (id,))
@@ -261,11 +261,22 @@ class PsgClient(object):
                 'year': value[2]
             }
 
-
     @reconnect
     def get_closest_lyrics(self, cur, lyr_id, song_id):
         cur.execute(self.closest_lyrics, (song_id, [lyr_id, lyr_id - 1, lyr_id + 1]))
         return cur.fetchall()
+
+    @reconnect
+    def get_user_by_token(self, cur, token):
+        cur.execute(self.get_user_by_token_query, (token,))
+        user = cur.fetchone()
+
+        if user:
+            return {
+                'id': user[0],
+            }
+
+        return None
 
 
 def get_lengths(ts):

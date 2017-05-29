@@ -5,6 +5,7 @@ import os
 import tempfile
 import json
 
+import requests
 from flask import Flask
 from flask import Response
 from flask import after_this_request, jsonify, request, send_file
@@ -12,7 +13,6 @@ from flask import after_this_request, jsonify, request, send_file
 from config import mongo, sphinx, postgres, cropper
 from external import utils
 from external.mazafaka import d
-
 
 UPLOAD_FOLDER = '/tmp/uploads'
 NOT_FLAC_EXTENSIONS = {'mp3', 'aac', 'm4a'}
@@ -33,6 +33,18 @@ def get_arg(key, default=None):
         return request.args.get(key)
     else:
         return request.args.get(key, default)
+
+
+def get_user():
+    api_token = request.args.get('api_token')
+
+    if not len(api_token):
+        api_token = request.cookies.get('api_token')
+
+    if not len(api_token):
+        return None
+
+    return postgres.get_user_by_token(api_token)
 
 
 @app.route('/')
@@ -332,6 +344,11 @@ def song_id_stream(song_id, from_ms, to_ms):
         return ''
     res = cropper.get_song(info['mongo_id'], [[int(from_ms), int(to_ms)]])
     return Response(res.text, mimetype='audio/mpeg')
+
+
+@app.route('/api/v2/likes', methods=['GET'])
+def get_my_likes():
+    return json_response(get_user())
 
 
 if __name__ == '__main__':
