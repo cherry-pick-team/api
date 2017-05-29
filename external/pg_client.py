@@ -127,7 +127,7 @@ class PsgClient(object):
                 DISTINCT t.songid
             FROM transcription AS t
             WHERE t.id=ANY(%s)
-        );
+        ) AS ttable;
         '''
 
         self.logger = logger
