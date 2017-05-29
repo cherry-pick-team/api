@@ -38,10 +38,10 @@ def get_arg(key, default=None):
 def get_user():
     api_token = request.args.get('api_token')
 
-    if not len(api_token):
+    if api_token is None or not len(api_token):
         api_token = request.cookies.get('api_token')
 
-    if not len(api_token):
+    if api_token is None or not len(api_token):
         return None
 
     return postgres.get_user_by_token(api_token)
