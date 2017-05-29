@@ -5,7 +5,7 @@ import psycopg2
 
 class PsgClient(object):
     def __init__(self, logger, host, user, password, db_name):
-        self.select_unique_songs = '''
+        self._q_select_unique_songs = '''
         SELECT
             t.songid, s.album_id, s.file_id, array_agg(t.start_time_ms),
             array_agg(t.end_time_ms), array_agg(t.id)
@@ -16,20 +16,20 @@ class PsgClient(object):
         GROUP BY t.songid, s.album_id, s.file_id;
         '''
 
-        self.select_album = '''
+        self._q_select_album = '''
         SELECT title, cover_id, year
         FROM album
         WHERE id=%s;
         '''
 
-        self.select_song = '''
+        self._q_select_song = '''
         SELECT
             s.author, s.title, s.lyrics, s.file_id, s.album_id
         FROM songs AS s
         WHERE s.id=%s;
         '''
 
-        self.get_ordered_lyrics_map = '''
+        self._q_get_ordered_lyrics_map = '''
         SELECT
             t.start_time_ms, t.phrase
         FROM transcription AS t
@@ -37,15 +37,15 @@ class PsgClient(object):
         ORDER BY t.start_time_ms;
         '''
 
-        self.add_to_query_history = '''
+        self._q_add_to_query_history = '''
         INSERT INTO query_history (query) VALUES(%s);
         '''
 
-        self.add_to_song_history = '''
+        self._q_add_to_song_history = '''
         INSERT INTO song_history (songid) VALUES(%s);
         '''
 
-        self.popular_queries = '''
+        self._q_popular_queries = '''
         SELECT
             qh.query, COUNT(*)
         FROM query_history AS qh
@@ -54,7 +54,7 @@ class PsgClient(object):
         LIMIT {};
         '''
 
-        self.popular_song_ids = '''
+        self._q_popular_song_ids = '''
         SELECT
             sh.songid, COUNT(*)
         FROM song_history AS sh
@@ -64,59 +64,70 @@ class PsgClient(object):
         LIMIT {};
         '''
 
-        self.closest_lyrics = '''
+        self._q_closest_lyrics = '''
         SELECT t.phrase
         FROM transcription AS t
-        WHERE t.songid=%s AND t.id=ANY(%s)
+        WHERE t.songid=%s AND t.id=ANY(%s);
         '''
 
-        self.all_songs = '''
+        self._q_all_songs = '''
         SELECT
             DISTINCT s.id, SUBSTR(s.title, 2)
         FROM songs AS s
         ORDER BY SUBSTR(s.title, 2)
-        LIMIT {} OFFSET {}
+        LIMIT {} OFFSET {};
         '''
 
-        self.sond_id_from_transcription = '''
+        self._q_sond_id_from_transcription = '''
         SELECT
             t.songid
         FROM transcription AS t
-        WHERE t.id=%s
+        WHERE t.id=%s;
         '''
 
-        self.get_user_by_token_query = '''
+        self._q_get_user_by_token_query = '''
         SELECT
             u.id
         FROM users AS u
         INNER JOIN user_tokens AS ut ON ut.user_id = u.id
-        WHERE ut.token=%s
+        WHERE ut.token=%s;
         '''
 
-        self.get_user_likes_songs_query = '''
+        self._q_get_user_likes_songs_query = '''
         SELECT
             sl.song_id, MAX(sl.created_at)
         FROM song_likes AS sl
         WHERE sl.user_id=%s
         GROUP BY sl.song_id
         ORDER BY MAX(sl.created_at) DESC
-        LIMIT {} OFFSET {}
+        LIMIT {} OFFSET {};
         '''
 
-        self.add_like_song_query = '''
-        INSERT INTO song_likes (song_id, user_id) VALUES(%s, %s)
+        self._q_add_like_song_query = '''
+        INSERT INTO song_likes (song_id, user_id) VALUES(%s, %s);
         '''
 
-        self.remove_like_song_query = '''
-        DELETE FROM song_likes WHERE song_id=%s AND user_id=%s
+        self._q_remove_like_song_query = '''
+        DELETE FROM song_likes WHERE song_id=%s AND user_id=%s;
         '''
 
-        self.get_user_has_song_like_query = '''
+        self._q_get_user_has_song_like_query = '''
         SELECT
             sl.song_id
         FROM song_likes AS sl
         WHERE sl.song_id=%s
-        AND sl.user_id=%s
+        AND sl.user_id=%s;
+        '''
+
+        self._q_get_number_of_songs = '''
+        SELECT
+            COUNT(*)
+        FROM (
+            SELECT
+                DISTINCT t.songid
+            FROM transcription AS t
+            WHERE t.id=ANY(%s)
+        );
         '''
 
         self.logger = logger
@@ -138,18 +149,17 @@ class PsgClient(object):
             except Exception as e:
                 if not self.conn.closed:
                     self.conn.rollback()
-                self.logger.error('Failed to get songs info')
+                self.logger.error('Failed to execute psql query')
                 self.logger.error(e)
-                return {}
+                return tuple()
             finally:
                 if cur:
                     cur.close()
-
         return deco
 
     @reconnect
     def get_lyrics_map(self, cur, songid):
-        cur.execute(self.get_ordered_lyrics_map, (songid,))
+        cur.execute(self._q_get_ordered_lyrics_map, (songid,))
         phrase_and_timestamps = cur.fetchall()
         if phrase_and_timestamps:
             result = collections.OrderedDict()
@@ -164,7 +174,7 @@ class PsgClient(object):
         result_array = []
         songs_seq = []
         for id in relevant_ids_seq:
-            cur.execute(self.sond_id_from_transcription, (id,))
+            cur.execute(self._q_sond_id_from_transcription, (id,))
             current_id = cur.fetchone()[0]
             if current_id not in songs_seq:
                 songs_seq.append(current_id)
@@ -175,7 +185,7 @@ class PsgClient(object):
 
     @reconnect
     def get_all_song_ids_and_timestamps(self, cur, ids):
-        cur.execute(self.select_unique_songs, (ids,))
+        cur.execute(self._q_select_unique_songs, (ids,))
         ids_plus_chunks = cur.fetchall()
         if ids_plus_chunks:
             result = []
@@ -211,7 +221,7 @@ class PsgClient(object):
 
     @reconnect
     def get_song_info_by_id(self, cur, id):
-        cur.execute(self.select_song, (id,))
+        cur.execute(self._q_select_song, (id,))
         value = cur.fetchone()
         if value and len(value) > 4:
             return {
@@ -224,7 +234,7 @@ class PsgClient(object):
 
     @reconnect
     def add_query_history(self, cur, query):
-        cur.execute(self.add_to_query_history, (query,))
+        cur.execute(self._q_add_to_query_history, (query,))
         self.conn.commit()
 
     @reconnect
@@ -232,12 +242,12 @@ class PsgClient(object):
         if not _id:
             return
         self.logger.info('Add song to history: `{}`'.format(_id))
-        cur.execute(self.add_to_song_history, (_id,))
+        cur.execute(self._q_add_to_song_history, (_id,))
         self.conn.commit()
 
     @reconnect
     def get_popular_queries(self, cur, limit=10):
-        cur.execute(self.popular_queries.format(limit))
+        cur.execute(self._q_popular_queries.format(limit))
         rows = cur.fetchall()
         if rows:
             result = []
@@ -251,7 +261,7 @@ class PsgClient(object):
 
     @reconnect
     def get_popular_songs(self, cur, limit=10):
-        cur.execute(self.popular_song_ids.format(limit))
+        cur.execute(self._q_popular_song_ids.format(limit))
         rows = cur.fetchall()
         if rows:
             result = []
@@ -265,7 +275,7 @@ class PsgClient(object):
 
     @reconnect
     def get_all_songs(self, cur, offset, limit):
-        cur.execute(self.all_songs.format(limit, offset))
+        cur.execute(self._q_all_songs.format(limit, offset))
         rows = cur.fetchall()
         if rows:
             result = []
@@ -278,7 +288,7 @@ class PsgClient(object):
 
     @reconnect
     def get_album_info(self, cur, id):
-        cur.execute(self.select_album, (id,))
+        cur.execute(self._q_select_album, (id,))
         value = cur.fetchone()
         if value and len(value) > 2:
             return {
@@ -289,12 +299,12 @@ class PsgClient(object):
 
     @reconnect
     def get_closest_lyrics(self, cur, lyr_id, song_id):
-        cur.execute(self.closest_lyrics, (song_id, [lyr_id, lyr_id - 1, lyr_id + 1]))
+        cur.execute(self._q_closest_lyrics, (song_id, [lyr_id, lyr_id - 1, lyr_id + 1]))
         return cur.fetchall()
 
     @reconnect
     def get_user_by_token(self, cur, token):
-        cur.execute(self.get_user_by_token_query, (token,))
+        cur.execute(self._q_get_user_by_token_query, (token,))
         user = cur.fetchone()
 
         if user:
@@ -309,7 +319,7 @@ class PsgClient(object):
         if user is None or user.get('id') is None:
             return []
 
-        cur.execute(self.get_user_likes_songs_query.format(limit, offset), (user.get('id'),))
+        cur.execute(self._q_get_user_likes_songs_query.format(limit, offset), (user.get('id'),))
         rows = cur.fetchall()
         if rows:
             result = []
@@ -326,7 +336,7 @@ class PsgClient(object):
             return False
 
         try:
-            cur.execute(self.add_like_song_query, (song_id, user.get('id')))
+            cur.execute(self._q_add_like_song_query, (song_id, user.get('id')))
             self.conn.commit()
             return True
         except:
@@ -338,7 +348,7 @@ class PsgClient(object):
             return False
 
         try:
-            cur.execute(self.remove_like_song_query, (song_id, user.get('id')))
+            cur.execute(self._q_remove_like_song_query, (song_id, user.get('id')))
             self.conn.commit()
             return True
         except:
@@ -349,10 +359,16 @@ class PsgClient(object):
         if user is None or user.get('id') is None:
             return False
 
-        cur.execute(self.get_user_has_song_like_query, (song_id, user.get('id')))
+        cur.execute(self._q_get_user_has_song_like_query, (song_id, user.get('id')))
         row = cur.fetchone()
 
         return row is not None
+
+    @reconnect
+    def get_found_songs_number(self, cur, trascription_ids):
+        cur.execute(self._q_get_number_of_songs, (trascription_ids,))
+        row = cur.fetchone()
+        return row[0] if row and len(row) != 0 else None
 
 
 def get_lengths(ts):

@@ -100,6 +100,14 @@ def voice_search():
         result_file_path = source_file_path
     result = utils.retrieve_phrase(app.logger, result_file_path)
 
+    final_array = []
+    for phrase in result:
+        found_ids = sphinx.find_songs(phrase)
+        final_array.append({
+            'query': phrase,
+            'songs': postgres.get_found_songs_number(found_ids),
+        })
+
     @after_this_request
     def remove_file(response):
         try:
@@ -111,7 +119,7 @@ def voice_search():
             app.logger.error(error)
         return response
 
-    return json_response(result)
+    return json_response(final_array)
 
 
 def song_full_pack_info(incoming_info):
@@ -225,7 +233,7 @@ def search():
         a = difflib.get_close_matches(word, d.keys(), n=1, cutoff=0.6)
         if len(a) > 0:
             updated_q.append(d.get(a[0]))
-    if updated_q:
+    if len(updated_q) != 0:
         query = ' '.join(updated_q)
 
     app.logger.info(query)
