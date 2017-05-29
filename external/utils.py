@@ -52,8 +52,8 @@ def retrieve_phrase(logger, path_to_file):
             result_list = [
                 i.get('transcript')
                 for i in
-                sorted(g_res['alternative'], key=lambda alternative: alternative.get("confidence"))
-                ]
+                reversed(sorted(g_res['alternative'], key=lambda alternative: alternative.get("confidence")))
+            ]
     except Exception as e:
         logger.error('Failed to get recognized data from Google')
         logger.error(e)
