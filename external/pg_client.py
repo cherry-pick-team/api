@@ -93,6 +93,23 @@ class PsgClient(object):
         WHERE ut.token=%s
         '''
 
+        self.get_user_likes_songs_query = '''
+        SELECT
+            sl.song_id, sl.date_created
+        FROM song_likes AS sl
+        WHERE user_id=%s
+        ORDER BY created_at ASC
+        LIMIT {} OFFSET {}
+        '''
+
+        self.add_like_song_query = '''
+        INSERT INTO song_likes (song_id, user_id) VALUES(%s, %s)
+        '''
+
+        self.remove_like_song_query = '''
+        DELETE FROM song_likes WHERE song_id=%s AND user_id=%s
+        '''
+
         self.logger = logger
         self.db_name = db_name
         self.db_host = host
@@ -277,6 +294,46 @@ class PsgClient(object):
             }
 
         return None
+
+    @reconnect
+    def get_user_likes_songs(self, cur, user, offset, limit):
+        if user is None or user.get('id') is None:
+            return []
+
+        cur.execute(self.get_user_likes_songs_query.format(limit, offset), (user.get('id'),))
+        rows = cur.fetchall()
+        if rows:
+            result = []
+            for row in rows:
+                query = row[0]
+                result.append({'id': query})
+            return result
+        else:
+            return []
+
+    @reconnect
+    def add_like_song(self, cur, user, song_id):
+        if user is None or user.get('id') is None:
+            return False
+
+        try:
+            cur.execute(self.add_like_song_query, (song_id, user.get('id')))
+            self.conn.commit()
+            return True
+        except:
+            return False
+
+    @reconnect
+    def remove_like_song(self, cur, user, song_id):
+        if user is None or user.get('id') is None:
+            return False
+
+        try:
+            cur.execute(self.remove_like_song_query, (song_id, user.get('id')))
+            self.conn.commit()
+            return True
+        except:
+            return False
 
 
 def get_lengths(ts):

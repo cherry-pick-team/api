@@ -347,8 +347,58 @@ def song_id_stream(song_id, from_ms, to_ms):
 
 
 @app.route('/api/v2/likes', methods=['GET'])
-def get_my_likes():
-    return json_response(get_user())
+def get_my_likes_songs():
+    limit = get_arg('limit', str(20))
+    page = get_arg('page', str(1))
+
+    try:
+        limit = int(limit)
+        page = int(page)
+    except ValueError:
+        return jsonify({
+            'code': '400',
+            'message': 'wrong format',
+            'fields': [
+                'limit',
+            ]
+        })
+    offset = limit * (page - 1)
+    result = postgres.get_user_likes_songs(get_user(), offset, limit)
+    result = list(map(song_full_pack_info, result))
+
+    return json_response(result)
+
+
+@app.route('/api/v2/song/<song_id>/like', methods=['POST'])
+def like_song(song_id):
+    try:
+        is_like = bool(get_arg('up', 1))
+    except ValueError:
+        return jsonify({
+            'code': '400',
+            'message': 'wrong format',
+            'fields': [
+                'up',
+            ]
+        })
+
+    user = get_user()
+
+    if user is None or user.get('id') is None:
+        return jsonify({
+            'code': '403',
+            'message': 'forbidden',
+            'fields': []
+        })
+
+    if is_like:
+        res = postgres.add_like_song(user, song_id)
+    else:
+        res = postgres.remove_like_song(user, song_id)
+
+    return json_response({
+        'result': res,
+    })
 
 
 if __name__ == '__main__':
