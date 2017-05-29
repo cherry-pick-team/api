@@ -12,14 +12,14 @@ class PsgClient(object):
         FROM transcription AS t
         JOIN songs AS s
         ON s.id = t.songid
-        WHERE t.id=any(%s)
+        WHERE t.id=ANY(%s)
         GROUP BY t.songid, s.album_id, s.file_id;
         '''
 
         self.select_album = '''
         SELECT title, cover_id, year
         FROM album
-        where id=%s;
+        WHERE id=%s;
         '''
 
         self.select_song = '''
@@ -95,10 +95,11 @@ class PsgClient(object):
 
         self.get_user_likes_songs_query = '''
         SELECT
-            sl.song_id, sl.created_at
+            sl.song_id, MAX(sl.created_at)
         FROM song_likes AS sl
-        WHERE user_id=%s
-        ORDER BY created_at DESC
+        WHERE sl.user_id=%s
+        GROUP BY sl.song_id
+        ORDER BY MAX(sl.created_at) DESC
         LIMIT {} OFFSET {}
         '''
 
