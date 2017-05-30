@@ -1,4 +1,5 @@
 import collections
+import re
 
 import psycopg2
 
@@ -67,7 +68,8 @@ class PsgClient(object):
         self._q_closest_lyrics = '''
         SELECT t.phrase
         FROM transcription AS t
-        WHERE t.songid=%s AND t.id=ANY(%s);
+        WHERE t.songid=%s AND t.id=ANY(%s)
+        ORDER BY t.id;
         '''
 
         self._q_all_songs = '''
@@ -204,10 +206,7 @@ class PsgClient(object):
                         lir_dicts_list.append({
                             'start': chunk[0],
                             'end': chunk[1],
-                            'lyrics': [
-                                i[0]
-                                for i in self.get_closest_lyrics(chunk[2], song_id)
-                                if i[0] and i[0] != "" and "chorus" not in i[0].lower()]
+                            'lyrics': self.get_closest_lyrics(chunk[2], song_id)
                         })
                     result.append({
                         'id': song_id,
@@ -299,8 +298,40 @@ class PsgClient(object):
 
     @reconnect
     def get_closest_lyrics(self, cur, lyr_id, song_id):
-        cur.execute(self._q_closest_lyrics, (song_id, [lyr_id, lyr_id - 1, lyr_id + 1]))
-        return cur.fetchall()
+        try:
+            cur.execute(self._q_closest_lyrics, (song_id, [lyr_id, lyr_id - 1, lyr_id + 1]))
+            lyrics = cur.fetchall()
+            messed_lyrics = [
+                i[0]
+                for i in lyrics
+                if i[0] and i[0] != "" and "chorus" not in i[0].lower()
+            ]
+            result_array = []
+            counter = 0
+            for line in messed_lyrics:
+                if len(result_array) == 3:
+                    break
+                counter += 1
+                if len(line) < 50:
+                    result_array.append(line)
+                else:
+                    split_line = [a for a in re.split(r'([A-Z][a-z]*)', line, 2) if a]
+                    if not split_line:
+                        continue
+                    if len(split_line) == 3 and counter == 2:
+                            return split_line
+                    if len(split_line) > 0:
+                        if counter == 1:
+                            result_array.append(split_line[-1])
+                        if counter == 2:
+                            result_array.extend(split_line)
+                        if counter == 3:
+                            result_array.append(split_line[0])
+            return result_array
+        except Exception as e:
+            self.logger(e)
+            return []
+
 
     @reconnect
     def get_user_by_token(self, cur, token):
