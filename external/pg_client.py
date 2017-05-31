@@ -312,7 +312,7 @@ class PsgClient(object):
                 if len(result_array) == 3:
                     break
                 counter += 1
-                if len(line) < 69:
+                if len(line) < 59:
                     result_array.append(line)
                 else:
                     split_line = get_up_set(line)
@@ -446,22 +446,27 @@ def get_up_set(s):
 
         # result_indices -- indexes on which we will split string
         result_indices = [diff_between_uppers[0][1]]
+        # these are const :)
+        biggest_diff = 5
+        smallest_str_len = 69
         for i, j in enumerate(diff_between_uppers):
             if i == 0:
                 continue
-            # 12 -- MAGIC NUMBER
-            if diff_between_uppers[i - 1][0] - diff_between_uppers[i][0] > 12:
+            curr_diff = diff_between_uppers[i - 1][0] - diff_between_uppers[i][0]
+            smallest_str_len = min(smallest_str_len, curr_diff)
+            biggest_diff = min(biggest_diff, curr_diff)
+            if curr_diff > biggest_diff * 2:
                 break
             result_indices.append(diff_between_uppers[i][1])
         # result_indices = [140, 46, 89]
-
         if 0 not in result_indices:
             result_indices.append(0)
         result_indices.sort()
+
         # result_indices = [0, 46, 89, 140]
-        if result_indices[1] - result_indices[0] < 20:
+        if result_indices[1] - result_indices[0] < smallest_str_len / 2 and len(result_indices) > 2:
             del result_indices[1]
-        if len(s) - result_indices[-1] < 20:
+        if len(s) - result_indices[-1] < smallest_str_len / 2 and len(result_indices) > 2:
             del result_indices[-1]
 
         # final -- array of prepared split string
