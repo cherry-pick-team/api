@@ -427,15 +427,13 @@ class PsgClient(object):
             # result_indices -- indexes on which we will split string
             result_indices = [diff_between_uppers[0][1]]
             # these are const :)
-            biggest_diff = 5
-            smallest_str_len = 59
+            biggest_diff = 12
+            smallest_str_len = 15
             for i, j in enumerate(diff_between_uppers):
                 if i == 0:
                     continue
                 curr_diff = diff_between_uppers[i - 1][0] - diff_between_uppers[i][0]
-                smallest_str_len = min(smallest_str_len, curr_diff)
-                biggest_diff = min(biggest_diff, curr_diff)
-                if curr_diff > biggest_diff * 2:
+                if curr_diff > biggest_diff:
                     break
                 result_indices.append(diff_between_uppers[i][1])
             # result_indices = [140, 46, 89]
@@ -444,9 +442,9 @@ class PsgClient(object):
             result_indices.sort()
 
             # result_indices = [0, 46, 89, 140]
-            if result_indices[1] - result_indices[0] < smallest_str_len / 2 and len(result_indices) > 2:
+            if result_indices[1] - result_indices[0] < smallest_str_len and len(result_indices) > 2:
                 del result_indices[1]
-            if len(s) - result_indices[-1] < smallest_str_len / 2 and len(result_indices) > 2:
+            if len(s) - result_indices[-1] < smallest_str_len and len(result_indices) > 2:
                 del result_indices[-1]
 
             # final -- array of prepared split string
@@ -490,4 +488,3 @@ def get_lengths(ts):
             res.append(one)
 
     return res
-
