@@ -315,10 +315,10 @@ class PsgClient(object):
                 if len(line) < 50:
                     result_array.append(line)
                 else:
-                    split_line = [a for a in re.split(r'([A-Z][a-z]*)', line, 2) if a]
+                    split_line = get_up_set(line)
                     if not split_line:
                         continue
-                    if len(split_line) == 3 and counter == 2:
+                    if len(split_line) >= 3 and counter == 2:
                             return split_line
                     if len(split_line) > 0:
                         if counter == 1:
@@ -331,7 +331,6 @@ class PsgClient(object):
         except Exception as e:
             self.logger(e)
             return []
-
 
     @reconnect
     def get_user_by_token(self, cur, token):
@@ -418,3 +417,71 @@ def get_lengths(ts):
             res.append(one)
 
     return res
+
+
+def get_up_set(s):
+    """
+    Example:
+    s = "So, I won’t let you close enough to hurt me No, I won’t rescue you to just desert me I can’t give you the heart you think you gave me It’s time to say goo
+    dbye to turning tables"
+    """
+
+    if len(s) == 0:
+        return []
+    try:
+        # biggest_ind -- array os capital letters in str
+        biggest_ind = [i for i, c in enumerate(s) if c.isupper()]
+        # biggest_ind = [0, 4, 46, 50, 89, 140]
+
+        # diff_between_uppers array of arrays diff between capital letters
+        #      first - is diff between curr and prev
+        #      second - is index of capital letter in the string
+        diff_between_uppers = [[0, 0]]
+        for i, c in enumerate(biggest_ind):
+            if i == 0:
+                continue
+            diff_between_uppers.append([c - diff_between_uppers[-1][1], c])
+        diff_between_uppers.sort(key=lambda d: d[0], reverse=True)
+        # diff_between_uppers = [[51, 140], [42, 46], [39, 89], [4, 4], [4, 50], [0, 0]]
+
+        # result_indices -- indexes on which we will split string
+        result_indices = [diff_between_uppers[0][1]]
+        for i, j in enumerate(diff_between_uppers):
+            if i == 0:
+                continue
+            # 12 -- MAGIC NUMBER
+            if diff_between_uppers[i - 1][0] - diff_between_uppers[i][0] > 12:
+                break
+            result_indices.append(diff_between_uppers[i][1])
+        # result_indices = [140, 46, 89]
+
+        if 0 not in result_indices:
+            result_indices.append(0)
+        result_indices.sort()
+        # result_indices = [0, 46, 89, 140]
+        if len(s) - result_indices[-1] < 20:
+            del result_indices[-1]
+
+        # final -- array of prepared split string
+        final = []
+        for i, j in enumerate(result_indices):
+            if i == 0:
+                continue
+            final.append(s[result_indices[i - 1]: j].strip())
+        final.append(s[result_indices[-1]:].strip())
+        return final
+    except Exception as e:
+        # OKAY Exception -- let's just split into two
+        l = len(s) / 2
+        split_index_upper = 0
+        split_index_space = len(s)
+        for i, ch in enumerate(s[l:]):
+            if ch.isupper():
+                split_index_upper = l + i
+                break
+            if ch == ' ':
+                split_index_space = min(split_index_space, l + i)
+
+        return [s[0:split_index_upper].strip(), s[split_index_upper:].strip()] \
+            if split_index_upper != 0 \
+            else [s[0:split_index_space].strip(), s[split_index_space:].strip()]
