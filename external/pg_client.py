@@ -309,6 +309,7 @@ class PsgClient(object):
             result_array = []
             counter = 0
             for line in messed_lyrics:
+                counter += 1
                 if len(result_array) == 3:
                     break
                 if len(line) < 59:
@@ -316,16 +317,16 @@ class PsgClient(object):
                 else:
                     split_line = self.get_up_set(line)
                     if not split_line:
+                        result_array.append(line)
                         continue
                     if len(split_line) >= 3 and counter == 2:
                             return split_line
-                    if len(split_line) > 0:
-                        if counter == 1:
-                            result_array.append(split_line[-1])
-                        if counter == 2:
-                            result_array.extend(split_line)
-                        if counter == 3:
-                            result_array.append(split_line[0])
+                    if counter == 1:
+                        result_array.append(split_line[-1])
+                    if counter == 2:
+                        result_array.extend(split_line)
+                    if counter == 3:
+                        result_array.append(split_line[0])
             return result_array
         except Exception as e:
             self.logger.error(e)
@@ -411,6 +412,9 @@ class PsgClient(object):
         try:
             # biggest_ind -- array os capital letters in str
             biggest_ind = [i for i, c in enumerate(s) if c.isupper()]
+            if len(biggest_ind) == 1:
+                return sub_splitter(s)
+
             # biggest_ind = [0, 4, 46, 50, 89, 140]
 
             # diff_between_uppers array of arrays diff between capital letters
@@ -458,18 +462,21 @@ class PsgClient(object):
         except Exception as e:
             self.logger.error(e)
             # OKAY Exception -- let's just split into two
-            l = int(len(s) / 2)
-            split_index_upper = 0
-            split_index_space = len(s)
-            for i, ch in enumerate(s[l:]):
-                if ch.isupper():
-                    split_index_upper = int(l + i)
-                    break
-                if ch == ' ':
-                    split_index_space = min(split_index_space, int(l + i))
+            return sub_splitter(s)
 
-            splitter = int(split_index_space) if split_index_upper == 0 else int(split_index_upper)
-            return [s[0:splitter].strip(), s[splitter:].strip()]
+def sub_splitter(s):
+    l = int(len(s) / 2)
+    split_index_upper = 0
+    split_index_space = len(s)
+    for i, ch in enumerate(s[l:]):
+        if ch.isupper():
+            split_index_upper = int(l + i)
+            break
+        if ch == ' ':
+            split_index_space = min(split_index_space, int(l + i))
+
+    splitter = int(split_index_space) if split_index_upper == 0 else int(split_index_upper)
+    return [s[0:splitter].strip(), s[splitter:].strip()]
 
 
 def get_lengths(ts):
