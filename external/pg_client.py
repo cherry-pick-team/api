@@ -314,7 +314,7 @@ class PsgClient(object):
                 if len(line) < 59:
                     result_array.append(line)
                 else:
-                    split_line = get_up_set(line)
+                    split_line = self.get_up_set(line)
                     if not split_line:
                         continue
                     if len(split_line) >= 3 and counter == 2:
