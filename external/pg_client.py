@@ -311,7 +311,6 @@ class PsgClient(object):
             for line in messed_lyrics:
                 if len(result_array) == 3:
                     break
-                counter += 1
                 if len(line) < 59:
                     result_array.append(line)
                 else:
@@ -329,7 +328,7 @@ class PsgClient(object):
                             result_array.append(split_line[0])
             return result_array
         except Exception as e:
-            self.logger(e)
+            self.logger.error(e)
             return []
 
     @reconnect
@@ -448,7 +447,7 @@ def get_up_set(s):
         result_indices = [diff_between_uppers[0][1]]
         # these are const :)
         biggest_diff = 5
-        smallest_str_len = 69
+        smallest_str_len = 59
         for i, j in enumerate(diff_between_uppers):
             if i == 0:
                 continue
