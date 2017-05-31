@@ -312,7 +312,7 @@ class PsgClient(object):
                 if len(result_array) == 3:
                     break
                 counter += 1
-                if len(line) < 50:
+                if len(line) < 69:
                     result_array.append(line)
                 else:
                     split_line = get_up_set(line)
@@ -459,6 +459,8 @@ def get_up_set(s):
             result_indices.append(0)
         result_indices.sort()
         # result_indices = [0, 46, 89, 140]
+        if result_indices[1] - result_indices[0] < 20:
+            del result_indices[1]
         if len(s) - result_indices[-1] < 20:
             del result_indices[-1]
 
