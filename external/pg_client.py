@@ -301,7 +301,7 @@ class PsgClient(object):
         cur.execute(self._q_closest_lyrics, (song_id, [lyr_id, lyr_id - 1, lyr_id + 1]))
         lyrics = cur.fetchall()
         messed_lyrics = [
-            i[0].decode("utf8").encode("cp1252")
+            i[0]
             for i in lyrics
             if i[0] and i[0] != "" and "chorus" not in i[0].lower()
         ]
