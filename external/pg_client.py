@@ -301,7 +301,7 @@ class PsgClient(object):
         cur.execute(self._q_closest_lyrics, (song_id, [lyr_id, lyr_id - 1, lyr_id + 1]))
         lyrics = cur.fetchall()
         messed_lyrics = [
-            i[0]
+            i[0].decode("utf8").encode("cp1252")
             for i in lyrics
             if i[0] and i[0] != "" and "chorus" not in i[0].lower()
         ]
@@ -310,7 +310,7 @@ class PsgClient(object):
             counter = 0
             for line in messed_lyrics:
                 counter += 1
-                if len(result_array) == 3:
+                if len(result_array) >= 3:
                     break
                 if len(line) < 65:
                     result_array.append(line)
@@ -324,7 +324,7 @@ class PsgClient(object):
                     if counter == 1:
                         result_array.append(split_line[-1])
                     if counter == 2:
-                        result_array.extend(split_line)
+                        result_array.extend(split_line[:2])
                     if counter == 3:
                         result_array.append(split_line[0])
             return result_array
@@ -421,43 +421,6 @@ class PsgClient(object):
                     continue
                 if biggest_ind[i] - biggest_ind[i-1] > 15:
                     res.append(j)
-            # biggest_ind = [0, 4, 46, 50, 89, 140]
-
-            # diff_between_uppers array of arrays diff between capital letters
-            #      first - is diff between curr and prev
-            #      second - is index of capital letter in the string
-            # diff_between_uppers = [[0, 0]]
-            # for i, c in enumerate(biggest_ind):
-            #     if i == 0:
-            #         continue
-            #     diff_between_uppers.append([c - diff_between_uppers[-1][1], c])
-            # diff_between_uppers.sort(key=lambda d: d[0], reverse=True)
-            # diff_between_uppers = [[51, 140], [42, 46], [39, 89], [4, 4], [4, 50], [0, 0]]
-
-            # result_indices -- indexes on which we will split string
-            # result_indices = [diff_between_uppers[0][1]]
-            # # these are const :)
-            # biggest_diff = 12
-            # smallest_str_len = 15
-            # for i, j in enumerate(diff_between_uppers):
-            #     if i == 0:
-            #         continue
-            #     curr_diff = diff_between_uppers[i - 1][0] - diff_between_uppers[i][0]
-            #     if curr_diff > biggest_diff:
-            #         break
-            #     result_indices.append(diff_between_uppers[i][1])
-            # # result_indices = [140, 46, 89]
-            # if 0 not in result_indices:
-            #     result_indices.append(0)
-            # result_indices.sort()
-            #
-            # # result_indices = [0, 46, 89, 140]
-            # if result_indices[1] - result_indices[0] < smallest_str_len and len(result_indices) > 2:
-            #     del result_indices[1]
-            # if len(s) - result_indices[-1] < smallest_str_len and len(result_indices) > 2:
-            #     del result_indices[-1]
-            #
-            # # final -- array of prepared split string
             final = []
             for i, j in enumerate(res):
                 if i == 0:
