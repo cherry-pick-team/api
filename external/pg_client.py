@@ -206,7 +206,10 @@ class PsgClient(object):
                         lir_dicts_list.append({
                             'start': chunk[0],
                             'end': chunk[1],
-                            'lyrics': self.get_closest_lyrics(chunk[2], song_id)
+                            'lyrics': [
+                                i.encode("cp1252")
+                                for i in self.get_closest_lyrics(chunk[2], song_id)
+                            ]
                         })
                     result.append({
                         'id': song_id,
@@ -320,7 +323,7 @@ class PsgClient(object):
                         result_array.append(line)
                         continue
                     if len(split_line) >= 3 and counter == 2:
-                            return split_line
+                            return split_line[:3]
                     if counter == 1:
                         result_array.append(split_line[-1])
                     if counter == 2:
