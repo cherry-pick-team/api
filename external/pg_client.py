@@ -207,7 +207,7 @@ class PsgClient(object):
                             'start': chunk[0],
                             'end': chunk[1],
                             'lyrics': [
-                                i.encode("cp1252").decode("utf-8", "ignore")
+                                i.encode("cp1252").decode("utf-8", 'replace').replace('\ufffd', ' ')
                                 for i in self.get_closest_lyrics(chunk[2], song_id)
                             ]
                         })
