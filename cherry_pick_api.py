@@ -5,7 +5,6 @@ import os
 import tempfile
 import json
 
-import requests
 from flask import Flask
 from flask import Response
 from flask import after_this_request, jsonify, request, send_file
@@ -412,7 +411,3 @@ def like_song(song_id):
     return json_response({
         'result': res,
     })
-
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0')
