@@ -2,7 +2,7 @@ import collections
 
 import psycopg2
 
-import utils
+from .utils import get_lengths, sub_splitter
 
 
 class PsgClient(object):
@@ -202,7 +202,7 @@ class PsgClient(object):
                     list(i)
                     for i in zip(id[3], id[4], id[5])
                     ]
-                res_list = utils.get_lengths(ts)
+                res_list = get_lengths(ts)
                 if res_list:
                     lir_dicts_list = []
                     for chunk in res_list:
@@ -419,7 +419,7 @@ class PsgClient(object):
             # biggest_ind -- array os capital letters in str
             biggest_ind = [i for i, c in enumerate(s) if c.isupper()]
             if len(biggest_ind) <= 1:
-                return utils.sub_splitter(s)
+                return sub_splitter(s)
 
             res = [0]
             for i, j in enumerate(biggest_ind):
@@ -433,8 +433,8 @@ class PsgClient(object):
                     continue
                 final.append(s[res[i - 1]: j].strip())
             final.append(s[res[-1]:].strip())
-            return final if len(final) > 1 else utils.sub_splitter(s)
+            return final if len(final) > 1 else sub_splitter(s)
         except Exception as e:
             self.logger.error(e)
             # OKAY Exception -- let's just split into two
-            return utils.sub_splitter(s)
+            return sub_splitter(s)
