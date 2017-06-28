@@ -1,4 +1,4 @@
-d = {
+translit_dict = {
     u"боут": "'bout",
     u"эбаут": "'bout",
     u"ибоут": "'bout",

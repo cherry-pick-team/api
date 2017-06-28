@@ -1,7 +1,8 @@
 import collections
-import re
 
 import psycopg2
+
+import utils
 
 
 class PsgClient(object):
@@ -158,6 +159,7 @@ class PsgClient(object):
             finally:
                 if cur:
                     cur.close()
+
         return deco
 
     @reconnect
@@ -200,7 +202,7 @@ class PsgClient(object):
                     list(i)
                     for i in zip(id[3], id[4], id[5])
                     ]
-                res_list = get_lengths(ts)
+                res_list = utils.get_lengths(ts)
                 if res_list:
                     lir_dicts_list = []
                     for chunk in res_list:
@@ -210,7 +212,7 @@ class PsgClient(object):
                             'lyrics': [
                                 i.encode("cp1252").decode("utf-8", 'replace').replace('\ufffd', ' ')
                                 for i in self.get_closest_lyrics(chunk[2], song_id)
-                            ]
+                                ]
                         })
                     result.append({
                         'id': song_id,
@@ -308,7 +310,7 @@ class PsgClient(object):
             i[0]
             for i in lyrics
             if i[0] and i[0] != "" and "chorus" not in i[0].lower()
-        ]
+            ]
         try:
             result_array = []
             counter = 0
@@ -324,7 +326,7 @@ class PsgClient(object):
                         result_array.append(line)
                         continue
                     if len(split_line) >= 3 and counter == 2:
-                            return split_line[:3]
+                        return split_line[:3]
                     if counter == 1:
                         result_array.append(split_line[-1])
                     if counter == 2:
@@ -417,13 +419,13 @@ class PsgClient(object):
             # biggest_ind -- array os capital letters in str
             biggest_ind = [i for i, c in enumerate(s) if c.isupper()]
             if len(biggest_ind) <= 1:
-                return sub_splitter(s)
+                return utils.sub_splitter(s)
 
             res = [0]
             for i, j in enumerate(biggest_ind):
                 if i == 0:
                     continue
-                if biggest_ind[i] - biggest_ind[i-1] > 15:
+                if biggest_ind[i] - biggest_ind[i - 1] > 15:
                     res.append(j)
             final = []
             for i, j in enumerate(res):
@@ -431,41 +433,8 @@ class PsgClient(object):
                     continue
                 final.append(s[res[i - 1]: j].strip())
             final.append(s[res[-1]:].strip())
-            return final if len(final) > 1 else sub_splitter(s)
+            return final if len(final) > 1 else utils.sub_splitter(s)
         except Exception as e:
             self.logger.error(e)
             # OKAY Exception -- let's just split into two
-            return sub_splitter(s)
-
-
-def sub_splitter(s):
-    l = int(len(s) / 2)
-    split_index_upper = 0
-    split_index_space = len(s)
-    for i, ch in enumerate(s[l:]):
-        if ch.isupper():
-            split_index_upper = int(l + i)
-            break
-        if ch == ' ':
-            split_index_space = min(split_index_space, int(l + i))
-
-    splitter = int(split_index_space) if split_index_upper == 0 else int(split_index_upper)
-    return [s[0:splitter].strip(), s[splitter:].strip()]
-
-
-def get_lengths(ts):
-    for sub_list in ts:
-        if sub_list[1] - sub_list[0] > 19000:
-            return [sub_list]
-
-    ts.sort(key=lambda x: x[0] - x[1])
-    ts = ts[:3]
-
-    res = []
-    for one in ts:
-        if one[1] - one[0] < 6000:
-            res.append([one[0] - 4000, one[1] + 4000, one[2]])
-        else:
-            res.append(one)
-
-    return res
+            return utils.sub_splitter(s)

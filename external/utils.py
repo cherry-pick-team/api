@@ -66,3 +66,36 @@ def retrieve_phrase(logger, path_to_file):
             logger.error('Failed to get recognized data from Sphinx')
             logger.error(e)
     return result_list
+
+
+def sub_splitter(s):
+    l = int(len(s) / 2)
+    split_index_upper = 0
+    split_index_space = len(s)
+    for i, ch in enumerate(s[l:]):
+        if ch.isupper():
+            split_index_upper = int(l + i)
+            break
+        if ch == ' ':
+            split_index_space = min(split_index_space, int(l + i))
+
+    splitter = int(split_index_space) if split_index_upper == 0 else int(split_index_upper)
+    return [s[0:splitter].strip(), s[splitter:].strip()]
+
+
+def get_lengths(ts):
+    for sub_list in ts:
+        if sub_list[1] - sub_list[0] > 19000:
+            return [sub_list]
+
+    ts.sort(key=lambda x: x[0] - x[1])
+    ts = ts[:3]
+
+    res = []
+    for one in ts:
+        if one[1] - one[0] < 6000:
+            res.append([one[0] - 4000, one[1] + 4000, one[2]])
+        else:
+            res.append(one)
+
+    return res

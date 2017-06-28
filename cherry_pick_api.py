@@ -13,7 +13,7 @@ from flask_limiter.util import get_remote_address
 
 from config import mongo, sphinx, postgres, cropper
 from external import utils
-from external.mazafaka import d
+from external.mazafaka import translit_dict
 
 UPLOAD_FOLDER = '/tmp/uploads'
 NOT_FLAC_EXTENSIONS = {'mp3', 'aac', 'm4a'}
@@ -156,9 +156,6 @@ def song_full_pack_info(incoming_info):
             'year': album_basic_info['year']
         }
     })
-    lyrics_map = postgres.get_lyrics_map(incoming_info['id'])
-    if lyrics_map:
-        song_basic_info['timestamp_lyrics'] = lyrics_map
 
     if song_basic_info.get('album') is None:
         cover_num = (int(song_basic_info.get('id')) % 6) + 1
@@ -239,9 +236,9 @@ def search():
         })
     updated_q = []
     for word in query.split(' '):
-        a = difflib.get_close_matches(word, d.keys(), n=1, cutoff=0.6)
-        if len(a) > 0:
-            updated_q.append(d.get(a[0]))
+        closest_word = difflib.get_close_matches(word, translit_dict.keys(), n=1, cutoff=0.6)
+        if len(closest_word) > 0:
+            updated_q.append(translit_dict.get(closest_word[0]))
     if len(updated_q) != 0:
         query = ' '.join(updated_q)
 
