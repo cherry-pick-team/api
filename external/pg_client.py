@@ -259,7 +259,7 @@ class PsgClient(object):
             for row in rows:
                 query = row[0]
                 count = row[1]
-                result.append({'query': query, 'count': count})
+                result.append({'query': query.lower(), 'count': count})
             return result
         else:
             return []
