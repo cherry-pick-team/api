@@ -23,10 +23,11 @@ ALLOWED_EXTENSIONS = NOT_FLAC_EXTENSIONS | FLAC_EXTENSIONS
 app = Flask(__name__)
 app.debug = True
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024
 limiter = Limiter(
     app,
     key_func=get_remote_address,
-    default_limits=["60 per minute"],
+    default_limits=['60 per minute'],
 )
 
 
@@ -80,7 +81,7 @@ def not_found(error):
 
 
 @app.route('/api/v2/search/voice', methods=['GET', 'POST'])
-@limiter.limit("15/minute")
+@limiter.limit('15/minute')
 def voice_search():
     if 'voice' not in request.files:
         return jsonify({
@@ -109,7 +110,7 @@ def voice_search():
 
     final_array = []
     for phrase in result:
-        found_ids = sphinx.find_songs(phrase)
+        found_ids = sphinx.find_songs(phrase, percent='1.0')
         final_array.append({
             'query': phrase,
             'songs': postgres.get_found_songs_number(found_ids),
@@ -122,7 +123,7 @@ def voice_search():
             if source_file_path != result_file_path:
                 os.remove(result_file_path)
         except Exception as error:
-            app.logger.error("Error removing or closing downloaded file handle")
+            app.logger.error('Error removing or closing downloaded file handle')
             app.logger.error(error)
         return response
 
@@ -200,7 +201,7 @@ def cover():
 
 
 @app.route('/api/v2/search', methods=['GET'])
-@limiter.limit("30/minute")
+@limiter.limit('30/minute')
 def search():
     query = get_arg('query', None)
     limit = get_arg('limit', str(10))
@@ -266,7 +267,7 @@ def search():
 
 
 @app.route('/api/v2/search/popular', methods=['GET'])
-@limiter.limit("30/minute")
+@limiter.limit('30/minute')
 def search_popular():
     limit = get_arg('limit', str(10))
 
@@ -282,12 +283,11 @@ def search_popular():
         })
 
     result = postgres.get_popular_queries(limit)
-
     return json_response(result)
 
 
 @app.route('/api/v2/song/popular', methods=['GET'])
-@limiter.limit("30/minute")
+@limiter.limit('30/minute')
 def song_popular():
     limit = get_arg('limit', str(10))
 
@@ -309,7 +309,7 @@ def song_popular():
 
 
 @app.route('/api/v2/song/all', methods=['GET'])
-@limiter.limit("30/minute")
+@limiter.limit('30/minute')
 def song_all():
     limit = get_arg('limit', str(20))
     page = get_arg('page', str(1))
@@ -333,7 +333,7 @@ def song_all():
 
 
 @app.route('/api/v2/song/<song_id>/info', methods=['GET'])
-@limiter.limit("30/minute")
+@limiter.limit('30/minute')
 def song_id_info(song_id):
     try:
         song_id = int(song_id)
@@ -359,7 +359,7 @@ def song_id_info(song_id):
 
 
 @app.route('/api/v2/song/<song_id>/stream/<from_ms>/<to_ms>', methods=['GET'])
-@limiter.limit("30/minute")
+@limiter.limit('30/minute')
 def song_id_stream(song_id, from_ms, to_ms):
     try:
         song_id = int(song_id)

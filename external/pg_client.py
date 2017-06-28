@@ -50,6 +50,7 @@ class PsgClient(object):
         SELECT
             qh.query, COUNT(*)
         FROM query_history AS qh
+        WHERE char_length(qh.query) > 4
         GROUP BY qh.query
         ORDER BY COUNT(*) DESC
         LIMIT {};
