@@ -4,6 +4,7 @@ import io
 import os
 import tempfile
 import json
+from distutils.util import strtobool
 
 from flask import Flask
 from flask import Response
@@ -205,6 +206,8 @@ def search():
     query = get_arg('query', None)
     limit = get_arg('limit', str(10))
     page = get_arg('page', str(1))
+    strict = strtobool(get_arg('strict', 'false'))
+    search_percent = '0.7' if not strict else '1.0'
 
     if query is None or query == '':
         return jsonify({
@@ -238,7 +241,7 @@ def search():
         })
     updated_q = []
     for word in query.split(' '):
-        closest_word = difflib.get_close_matches(word, translit_dict.keys(), n=1, cutoff=0.6)
+        closest_word = difflib.get_close_matches(word, translit_dict.keys(), n=1, cutoff=0.7)
         if len(closest_word) > 0:
             updated_q.append(translit_dict.get(closest_word[0]))
     if len(updated_q) != 0:
@@ -246,7 +249,7 @@ def search():
 
     app.logger.info(query)
     postgres.add_query_history(query)
-    found_ids = sphinx.find_songs(query)
+    found_ids = sphinx.find_songs(query, percent=search_percent)
     if not found_ids:
         return jsonify({
             'code': '404',

@@ -399,8 +399,7 @@ class PsgClient(object):
     @reconnect
     def get_found_songs_number(self, cur, trascription_ids):
         cur.execute(self._q_get_number_of_songs, (trascription_ids,))
-        row = cur.fetchone()
-        return list(row)
+        return list(cur.fetchall())
 
     def get_up_set(self, s):
         """
