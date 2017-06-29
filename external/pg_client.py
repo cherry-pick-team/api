@@ -125,13 +125,9 @@ class PsgClient(object):
 
         self._q_get_number_of_songs = '''
         SELECT
-            COUNT(*)
-        FROM (
-            SELECT
-                DISTINCT t.songid
-            FROM transcription AS t
-            WHERE t.id=ANY(%s)
-        ) AS ttable;
+            DISTINCT t.songid
+        FROM transcription AS t
+        WHERE t.id=ANY(%s)
         '''
 
         self.logger = logger
@@ -404,7 +400,7 @@ class PsgClient(object):
     def get_found_songs_number(self, cur, trascription_ids):
         cur.execute(self._q_get_number_of_songs, (trascription_ids,))
         row = cur.fetchone()
-        return row[0] if row and len(row) != 0 else None
+        return list(row)
 
     def get_up_set(self, s):
         """

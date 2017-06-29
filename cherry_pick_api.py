@@ -110,10 +110,12 @@ def voice_search():
 
     final_array = []
     for phrase in result:
-        found_ids = sphinx.find_songs(phrase, percent='1.0')
+        found_chunk_ids = sphinx.find_songs(phrase, percent='1.0')
+        song_ids = postgres.get_found_songs_number(found_chunk_ids)
         final_array.append({
             'query': phrase,
-            'songs': postgres.get_found_songs_number(found_ids),
+            'songs': len(song_ids),
+            'full_info': [song_full_pack_info({'id': id}) for id in song_ids]
         })
 
     @after_this_request
