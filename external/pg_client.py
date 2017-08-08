@@ -26,7 +26,7 @@ class PsgClient(object):
 
         self._q_select_song = '''
         SELECT
-            s.author, s.title, s.lyrics, s.file_id, s.album_id
+            s.author, s.title, s.lyrics, s.file_id, s.album_id, s.video_link, s.itunes_id
         FROM songs AS s
         WHERE s.id=%s;
         '''
@@ -224,13 +224,15 @@ class PsgClient(object):
     def get_song_info_by_id(self, cur, id):
         cur.execute(self._q_select_song, (id,))
         value = cur.fetchone()
-        if value and len(value) > 4:
+        if value and len(value) > 6:
             return {
                 'author': value[0],
                 'title': value[1],
                 'lyrics': value[2],
                 'mongo_id': value[3],
-                'album_id': value[4]
+                'album_id': value[4],
+                'video_link': value[5],
+                'itunes_link': value[6]
             }
 
     @reconnect
@@ -306,7 +308,7 @@ class PsgClient(object):
             i[0]
             for i in lyrics
             if i[0] and i[0] != "" and "chorus" not in i[0].lower()
-            ]
+        ]
         try:
             result_array = []
             counter = 0

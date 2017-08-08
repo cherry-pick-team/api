@@ -82,7 +82,7 @@ def not_found(error):
 
 
 @app.route('/api/v2/search/voice', methods=['GET', 'POST'])
-@limiter.limit('15/minute')
+@limiter.limit('150/minute')
 def voice_search():
     if 'voice' not in request.files:
         return jsonify({
@@ -201,7 +201,7 @@ def cover():
 
 
 @app.route('/api/v2/search', methods=['GET'])
-@limiter.limit('30/minute')
+@limiter.limit('300/minute')
 def search():
     query = get_arg('query', None)
     limit = get_arg('limit', str(10))
@@ -289,7 +289,7 @@ def search_popular():
 
 
 @app.route('/api/v2/song/popular', methods=['GET'])
-@limiter.limit('30/minute')
+@limiter.limit('300/minute')
 def song_popular():
     limit = get_arg('limit', str(10))
 
