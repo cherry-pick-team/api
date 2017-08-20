@@ -17,7 +17,7 @@ from external import utils
 from external.mazafaka import translit_dict
 
 UPLOAD_FOLDER = '/tmp/uploads'
-NOT_FLAC_EXTENSIONS = {'mp3', 'aac', 'm4a'}
+NOT_FLAC_EXTENSIONS = {'mp3', 'aac', 'm4a', 'ogg'}
 FLAC_EXTENSIONS = {'wav', 'flac'}
 ALLOWED_EXTENSIONS = NOT_FLAC_EXTENSIONS | FLAC_EXTENSIONS
 
@@ -207,7 +207,7 @@ def search():
     limit = get_arg('limit', str(10))
     page = get_arg('page', str(1))
     strict = strtobool(get_arg('strict', 'false'))
-    search_percent = '0.7' if not strict else '1.0'
+    search_percent = '1.0' if not strict else '1.0'
 
     if query is None or query == '':
         return jsonify({

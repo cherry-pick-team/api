@@ -94,7 +94,10 @@ def get_lengths(ts):
     res = []
     for one in ts:
         if one[1] - one[0] < 6000:
-            res.append([one[0] - 4000, one[1] + 4000, one[2]])
+            res.append([
+                one[0] - 4000 if one[0] > 4000 else 0,
+                one[1] + 4000,
+                one[2]])
         else:
             res.append(one)
 
