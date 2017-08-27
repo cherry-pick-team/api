@@ -4611,4 +4611,7 @@ translit_dict = {
     u'джастифай': 'justify',
     u'жастифай': 'justify',
     u"шугар": 'shugar',
+    u'тунайт': 'tonight',
+    u'майн': 'mine',
+    u'би': 'би',
 }
